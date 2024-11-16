@@ -223,11 +223,13 @@ def register():
                 else:
                     error = "An unexpected error occurred. Please try again."
             else:
-                return redirect(url_for("auth.login"))
+                return redirect(url_for("auth.register"))
 
         flash(error)
 
-    return render_template('auth/register.html')
+    return render_template('registration.html')
+
+app.register_blueprint(bp)
 
 
 @app.route('/login')
