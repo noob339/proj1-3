@@ -12,7 +12,7 @@ import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, session, render_template, g, redirect, Response, abort
+from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint
 from jinja2 import Environment, FileSystemLoader
 from graphviz import Graph
 # Jinja2 Environment
@@ -118,6 +118,7 @@ def teardown_request(exception):
 # see for routing: https://flask.palletsprojects.com/en/2.0.x/quickstart/?highlight=routing
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
 #
+
 @app.route('/')
 def index():
   """
@@ -203,15 +204,53 @@ def index():
 def another():
   return render_template("another.html")
 
+bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-# Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add(): 
-  name = request.form['name']
-  params_dict = {"name":name}
-  g.conn.execute(text('INSERT INTO test(name) VALUES (:name)'), params_dict)
-  g.conn.commit()
-  return redirect('/')
+@bp.route('/register', methods=('GET', 'POST'))
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form.get('email')  # Optional email input
+        password = request.form['password']
+        error = None
+
+        if not username:
+            error = 'Username is required.'
+        elif not email:
+            error = 'Email is required.'
+        elif not password:
+            error = 'Password is required.'
+
+        if error is None:
+            try:
+                query = text("""
+                    INSERT INTO "Users" ("UserName", "Email", "Password")
+                    VALUES (:username, :email, :password)
+                """)
+                conn.execute(
+                    query,
+                    {
+                        "username": username,
+                        "email": email,
+                        "password": generate_password_hash(password),
+                    }
+                )
+            except IntegrityError as e:
+                if 'unique constraint' in str(e.orig):
+                    if 'UserName' in str(e.orig):
+                        error = f"Username {username} is already registered."
+                    elif 'Email' in str(e.orig):
+                        error = f"Email {email} is already registered."
+                else:
+                    error = "An unexpected error occurred. Please try again."
+            else:
+                return redirect(url_for("auth.register"))
+
+        flash(error)
+
+    return render_template('registration.html')
+
+app.register_blueprint(bp)
 
 
 @app.route('/login')

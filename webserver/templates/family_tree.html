@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Visualization</title>
+</head>
+<body>
+    <h1>Graph Visualization</h1>
+
+    <form method="post">
+        <button type="submit">Generate Graph</button>
+    </form>
+
+    {% if graph_svg %}
+    <h2>Generated Graph:</h2>
+    <div>
+        {{ graph_svg|safe }}
+    </div>
+    {% endif %}
+</body>
+</html>

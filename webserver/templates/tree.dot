@@ -1,0 +1,12 @@
+graph G {
+    {% for node, attrs in graph.nodes.items() %}
+    "{{ node }}" [
+        href="{{ attrs.href }}";
+        tooltip="{{ attrs.tooltip }}";
+    ];
+    {% endfor %}
+
+    {% for edge in graph.edges %}
+    "{{ edge[0] }}" -- "{{ edge[1] }}";
+    {% endfor %}
+}
