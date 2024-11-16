@@ -13,11 +13,32 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, session, render_template, g, redirect, Response, abort
-
+from jinja2 import Environment, FileSystemLoader
+from graphviz import Graph
+# Jinja2 Environment
+env = Environment(loader=FileSystemLoader("templates"))
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
+import subprocess
+@app.route('/family_tree')
+def render_tree():
+    # Example graph data
+    nodes = {
+        "Node1": {"href": "http://example.com/1", "tooltip": "This is Node 1"},
+        "Node2": {"href": "http://example.com/2", "tooltip": "This is Node 2"},
+        "Node3": {"href": "http://example.com/3", "tooltip": "This is Node 3"},
+    }
+    edges = [("Node1", "Node2"), ("Node2", "Node3"), ("Node1", "Node3")]      # Generate the graph using Graphviz
+    graph = Graph(format="svg")  # Create an SVG graph
+    for node, attrs in nodes.items():
+        graph.node(node, href=attrs["href"], tooltip=attrs["tooltip"])
+    for edge in edges:
+        graph.edge(edge[0], edge[1])
+    # Render graph to SVG and send it as a response
+    svg = graph.pipe(format="svg").decode("utf-8")
+    return render_template("index.html", graph_svg=svg)
 
 #
 # The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
@@ -178,28 +199,6 @@ def index():
 # Notice that the function name is another() rather than index()
 # The functions for each app.route need to have different names
 #
-@app.route('/family_tree')
-def render_tree():
-    # Get graph data from the form
-    nodes = {
-        "A": {"label": "Node A", "tooltip": "Click for details about Node A", "href": "javascript:alert('Node A clicked!')"},
-        "B": {"label": "Node B", "tooltip": "Click for details about Node B", "href": "javascript:alert('Node B clicked!')"},
-        "C": {"label": "Node C", "tooltip": "Click for details about Node C", "href": "javascript:alert('Node C clicked!')"},
-        "D": {"label": "Node D", "tooltip": "Click for details about Node D", "href": "javascript:alert('Node D clicked!')"},
-    }
-    edges = [("A", "B"), ("A", "C"), ("B", "C"), ("B", "D"), ("C", "D")]
-
-    # Combine data into graph context
-    data = {"nodes": nodes, "edges": edges}
-
-    # Generate the graph
-    graph = Graph(graph_template, data)
-
-    # Render the graph to SVG
-    svg_content = graph.render_string(format="svg")
-
-    # Pass the SVG content to the template
-    return render_template("graph.html", svg_content=svg_content)
 @app.route('/another')
 def another():
   return render_template("another.html")
