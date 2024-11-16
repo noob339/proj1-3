@@ -12,7 +12,8 @@ import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response, abort, Blueprint
+from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint
+
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -49,7 +50,7 @@ conn.execute(text("""CREATE TABLE IF NOT EXISTS test (
   id serial,
   name text
 );"""))
-conn.execute(text("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"""))
+#conn.execute(text("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"""))
 
 # To make the queries run, we need to add this commit line
 
@@ -178,8 +179,6 @@ def index():
 # Notice that the function name is another() rather than index()
 # The functions for each app.route need to have different names
 #
-
-
 @app.route('/another')
 def another():
   return render_template("another.html")
