@@ -12,7 +12,8 @@ import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response, abort
+from flask import Flask, request, session, render_template, g, redirect, Response, abort
+
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -49,7 +50,7 @@ conn.execute(text("""CREATE TABLE IF NOT EXISTS test (
   id serial,
   name text
 );"""))
-conn.execute(text("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"""))
+#conn.execute(text("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"""))
 
 # To make the queries run, we need to add this commit line
 
@@ -177,6 +178,28 @@ def index():
 # Notice that the function name is another() rather than index()
 # The functions for each app.route need to have different names
 #
+@app.route('/family_tree')
+def render_tree():
+    # Get graph data from the form
+    nodes = {
+        "A": {"label": "Node A", "tooltip": "Click for details about Node A", "href": "javascript:alert('Node A clicked!')"},
+        "B": {"label": "Node B", "tooltip": "Click for details about Node B", "href": "javascript:alert('Node B clicked!')"},
+        "C": {"label": "Node C", "tooltip": "Click for details about Node C", "href": "javascript:alert('Node C clicked!')"},
+        "D": {"label": "Node D", "tooltip": "Click for details about Node D", "href": "javascript:alert('Node D clicked!')"},
+    }
+    edges = [("A", "B"), ("A", "C"), ("B", "C"), ("B", "D"), ("C", "D")]
+
+    # Combine data into graph context
+    data = {"nodes": nodes, "edges": edges}
+
+    # Generate the graph
+    graph = Graph(graph_template, data)
+
+    # Render the graph to SVG
+    svg_content = graph.render_string(format="svg")
+
+    # Pass the SVG content to the template
+    return render_template("graph.html", svg_content=svg_content)
 @app.route('/another')
 def another():
   return render_template("another.html")
