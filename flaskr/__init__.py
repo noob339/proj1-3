@@ -29,10 +29,16 @@ def create_app(test_config=None):
                 );
             """))
 
+            #here we would create all the tables? so our entire SQL schema
+
+
+    #just a page with the path /hello that displays hello,world?
     @app.route('/hello')
     def hello():
         return 'Hello, World!'
 
+
+    
     @app.route('/add_user', methods=['POST'])
     def add_user():
         username = request.form['username']
