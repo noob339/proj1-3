@@ -10,35 +10,17 @@ Read about it online.
 """
 import os
   # accessible as a variable in index.html:
-from sqlalchemy import *
+import sqlalchemy
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint
 from jinja2 import Environment, FileSystemLoader
-from graphviz import Graph
+from graphviz import Graph, Digraph
 # Jinja2 Environment
 env = Environment(loader=FileSystemLoader("templates"))
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
-import subprocess
-@app.route('/family_tree')
-def render_tree():
-    # Example graph data
-    nodes = {
-        "Node1": {"href": "http://example.com/1", "tooltip": "This is Node 1"},
-        "Node2": {"href": "http://example.com/2", "tooltip": "This is Node 2"},
-        "Node3": {"href": "http://example.com/3", "tooltip": "This is Node 3"},
-    }
-    edges = [("Node1", "Node2"), ("Node2", "Node3"), ("Node1", "Node3")]      # Generate the graph using Graphviz
-    graph = Graph(format="svg")  # Create an SVG graph
-    for node, attrs in nodes.items():
-        graph.node(node, href=attrs["href"], tooltip=attrs["tooltip"])
-    for edge in edges:
-        graph.edge(edge[0], edge[1])
-    # Render graph to SVG and send it as a response
-    svg = graph.pipe(format="svg").decode("utf-8")
-    return render_template("index.html", graph_svg=svg)
 
 #
 # The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
@@ -57,7 +39,7 @@ DATABASEURI = "postgresql://es4140:whocares123@104.196.222.236/proj1part2"
 #
 # This line creates a database engine that knows how to connect to the URI above.
 #
-engine = create_engine(DATABASEURI)
+engine = sqlalchemy.create_engine(DATABASEURI)
 
 #
 # Example of running queries in your database
@@ -67,7 +49,7 @@ conn = engine.connect()
 
 # The string needs to be wrapped around text()
 
-conn.execute(text("""CREATE TABLE IF NOT EXISTS test (
+conn.execute(sqlalchemy.text("""CREATE TABLE IF NOT EXISTS test (
   id serial,
   name text
 );"""))
@@ -76,6 +58,215 @@ conn.execute(text("""CREATE TABLE IF NOT EXISTS test (
 # To make the queries run, we need to add this commit line
 
 conn.commit() 
+@app.before_request
+def auth():
+    # List of routes to exclude from the middleware check
+    excluded_routes = ['index', 'login', 'register']
+    
+    # Check if the route is excluded
+    if request.endpoint in excluded_routes:
+        return  # Skip the check for these routes
+
+    # Check if the session variable "user" is set
+    if 'UserID' not in session:
+        return render_template('index.html')
+    
+@app.route('/family_tree')
+def render_tree():
+    with engine.connect() as conn:
+        # Fetch nodes
+        nodes_query = sqlalchemy.text("""
+        SELECT p.personid, p.firstname, p.lastname, p.associateduserid, l.lineagename 
+        FROM enum_lins(6) el
+        JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
+        JOIN Person AS p ON p.PersonID = lpc.PersonID
+        JOIN Lineages AS l ON l.LineageID = lpc.LineageID;
+        """)
+        nodes = conn.execute(nodes_query).fetchall()
+
+        # Fetch edges
+        edges_query = sqlalchemy.text("""
+        SELECT people.personid, r.directrelationship AS relatedtopersonid,
+               rt.RelationshipTypeID, rt.RelationshipTypeDesc 
+        FROM (SELECT p.*, l.lineagename 
+              FROM enum_lins(6) el
+              JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
+              JOIN Person AS p ON p.PersonID = lpc.PersonID
+              JOIN Lineages AS l ON l.LineageID = lpc.LineageID) people
+        JOIN Relations AS r ON r.personid = people.personid
+        JOIN RelationshipTypes rt ON r.DirectRelationshipTypeID = rt.RelationshipTypeID;
+        """)
+        edges = conn.execute(edges_query).fetchall()
+
+    # Create the graph
+    graph = Graph(format="svg")
+    #graph.attr(rankdir="LR")  # Left to right orientation
+
+    # Add nodes
+    for personid, firstname, lastname, associateduserid, lineagename in nodes:
+        graph.node(
+            str(personid),
+            label=f"{firstname} {lastname}\n(Lineage: {lineagename})",
+            tooltip=f"UserID: {associateduserid}",
+            href=f"/person/{personid}"
+        )
+    seen_edges = set()
+    # Add edges
+    for personid, relatedtopersonid, relationship_type_id, relationship_desc in edges:
+        if (relatedtopersonid, personid) in seen_edges or (personid, relatedtopersonid) in seen_edges:
+           continue
+        seen_edges.add((personid, relatedtopersonid))
+        graph.edge(
+            str(personid),
+            str(relatedtopersonid),
+            label=relationship_desc,
+            tooltip=f"Type ID: {relationship_type_id}"
+        )
+
+    # Render the graph to SVG
+    svg = graph.pipe(format="svg").decode("utf-8")
+    return render_template("family_tree.html", graph_svg=svg)
+
+def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
+    """
+    Handles adding new documentation to the database, including tags and mappings, within a single transaction.
+    """
+    # Begin a transaction
+    with conn.begin() as transaction:
+        try:
+            user_id = session.get("UserID", None)
+            # Insert the document into the Documents table
+            insert_doc_query = sqlalchemy.text("""
+            INSERT INTO Documents (AssociatedPersonID, DocumentDesc, LinkToDoc, OccurrenceDate, AssociatedUserID)
+            VALUES (:personid, :doc_desc, :doc_link, :doc_date, :user_id)
+            RETURNING DocumentID;
+            """)
+            result = conn.execute(
+                insert_doc_query,
+                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date, "user_id": user_id},
+            )
+            document_id = result.fetchone().DocumentID
+
+            # Parse the CSV of tags
+            tags = [tag.strip() for tag in tags_csv.split(",") if tag.strip()]
+
+            # Fetch existing tags from the DocumentTags table
+            existing_tags_query = sqlalchemy.text("""
+            SELECT DocumentTagID, DocumentTagDesc FROM DocumentTags WHERE DocumentTagDesc = ANY(:tags);
+            """)
+            existing_tags = conn.execute(existing_tags_query, {"tags": tags}).fetchall()
+
+            existing_tag_map = {row.DocumentTagDesc: row.DocumentTagID for row in existing_tags}
+            new_tags = [tag for tag in tags if tag not in existing_tag_map]
+
+            # Insert missing tags into the DocumentTags table
+            if new_tags:
+                insert_tags_query = sqlalchemy.text("""
+                INSERT INTO DocumentTags (DocumentTagDesc) VALUES (:tag) RETURNING DocumentTagID, DocumentTagDesc;
+                """)
+                for tag in new_tags:
+                    result = conn.execute(insert_tags_query, {"tag": tag})
+                    tag_row = result.fetchone()
+                    existing_tag_map[tag_row.DocumentTagDesc] = tag_row.DocumentTagID
+
+            # Map tags to the document in the DocumentTagMapping table
+            insert_mapping_query = sqlalchemy.text("""
+            INSERT INTO DocumentTagMapping (DocumentID, DocumentTagID, AssociatedUserID) VALUES (:document_id, :tag_id, :user_id);
+            """)
+            for tag_id in existing_tag_map.values():
+                conn.execute(insert_mapping_query, {"document_id": document_id, "tag_id": tag_id, "user_id": user_id})
+            
+            return redirect(f"/person/{personid}")
+        except Exception as e:
+            # If an error occurs, roll back the transaction
+            transaction.rollback()
+            raise e  # Re-raise the exception for further handling
+
+
+
+@app.route("/person/<int:personid>", methods=["GET", "POST"])
+def person_details(personid):
+    if request.method == "POST":
+        # Handle the POST request in a separate function
+        doc_desc = request.form["doc_desc"]
+        doc_link = request.form["doc_link"]
+        doc_date = request.form["doc_date"]
+        tags_csv = request.form["tags"]
+
+        with engine.connect() as conn:
+            return add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv)
+
+        # Redirect to refresh the page with the updated data
+        
+
+    # Fetch person details, relationships, and documentation
+    with engine.connect() as conn:
+        # Fetch person details
+        person_query = sqlalchemy.text("""
+        SELECT p.personid, p.firstname, p.lastname, p.associateduserid, l.lineagename 
+        FROM Person AS p
+        JOIN LineagePersonConnector AS lpc ON p.PersonID = lpc.PersonID
+        JOIN Lineages AS l ON l.LineageID = lpc.LineageID
+        WHERE p.personid = :personid;
+        """)
+        person_result = conn.execute(person_query, {"personid": personid}).fetchone()
+
+        # If person not found, return 404
+        if not person_result:
+            return f"Person with ID {personid} not found", 404
+
+        # Fetch relationships
+        relationships_query = sqlalchemy.text("""
+        SELECT Person.PersonID AS RelatedToPersonID, Person.FirstName, Person.LastName, rt.RelationshipTypeDesc 
+        FROM Relations AS r
+        JOIN RelationshipTypes AS rt ON r.DirectRelationshipTypeID = rt.RelationshipTypeID
+        JOIN Person ON Person.PersonID = r.directrelationship
+        WHERE r.personid = :personid;
+        """)
+        relationships = conn.execute(relationships_query, {"personid": personid}).fetchall()
+
+        # Fetch documentation
+        documentation_query = sqlalchemy.text("""
+        SELECT d.DocumentID, d.DocumentDesc, d.LinkToDoc, d.OccurrenceDate, 
+               STRING_AGG(dt.DocumentTagDesc, ',') AS tags
+        FROM Documents AS d
+        JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
+        JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
+        WHERE d.AssociatedPersonID = :personid
+        GROUP BY d.DocumentID, d.DocumentDesc, d.LinkToDoc, d.OccurrenceDate;
+        """)
+        documentation = conn.execute(documentation_query, {"personid": personid}).fetchall()
+
+    # Render the template
+    return render_template(
+        "person_details.html",
+        person={
+            "personid": person_result.personid,
+            "firstname": person_result.firstname,
+            "lastname": person_result.lastname,
+            "associateduserid": person_result.associateduserid,
+            "lineagename": person_result.lineagename,
+        },
+        relationships=[
+            {"related_to": RelatedToPersonID, "relationship_desc": RelationshipTypeDesc, "FirstName": FirstName, "LastName": LastName}
+            for RelatedToPersonID, FirstName, LastName, RelationshipTypeDesc in relationships
+        ],
+        documentation=[
+            {
+                "doc_id": DocumentID,
+                "desc":   DocumentDesc,
+                "link":   LinkToDoc,
+                "date":   OccurrenceDate,
+                "tags":   tags,
+            }
+            for DocumentID,
+                DocumentDesc,
+                LinkToDoc,
+                OccurrenceDate,
+                tags, in documentation
+        ],
+    )
+
 
 @app.before_request
 def before_request():
@@ -223,7 +414,7 @@ def register():
 
         if error is None:
             try:
-                query = text("""
+                query = sqlalchemy.text("""
                     INSERT INTO "Users" ("UserName", "Email", "Password")
                     VALUES (:username, :email, :password)
                 """)
@@ -232,10 +423,10 @@ def register():
                     {
                         "username": username,
                         "email": email,
-                        "password": generate_password_hash(password),
+                        "password": sqlalchemy.generate_password_hash(password),
                     }
                 )
-            except IntegrityError as e:
+            except sqlalchemy.IntegrityError as e:
                 if 'unique constraint' in str(e.orig):
                     if 'UserName' in str(e.orig):
                         error = f"Username {username} is already registered."
