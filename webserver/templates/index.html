@@ -1,29 +1,47 @@
-<html>
-  <style>
-    body{ 
-      font-size: 15pt;
-      font-family: arial;
-    }
-  </style>
-
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - My App</title>
+    <style>
+        body {
+            font-size: 15pt;
+            font-family: Arial, sans-serif;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+        }
+    </style>
+</head>
 <body>
-  <h1>Some famous Computer Scientists</h1>
-  <div>{{data}}</div>
 
-  <div>
-    {% for n in data %}
-    <div>{{n}}</div>
-    {% endfor %}
-  </div>
+    <!-- Navigation -->
+    <header>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            {% if 'user_id' in session %}
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}">Login</a>
+                <a href="{{ url_for('auth.register') }}">Register</a>
+            {% endif %}
+        </nav>
+    </header>
 
-<p><a href="another">Go to the other page</a></p>
-
-<form method="POST" action="/add">
-<p>Name of new computer scientist: <input type="text" name="name"> <input type="submit" value="Add"></p>
-</form>
+    <!-- Main Content -->
+    <main>
+        <h1>Welcome to My App</h1>
+        {% if 'user_id' in session %}
+            <p>Welcome back, user {{ session['user_id'] }}!</p>
+        {% else %}
+            <p>Please log in or register to access more features.</p>
+        {% endif %}
+    </main>
 
 </body>
-
-
 </html>
