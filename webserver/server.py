@@ -468,6 +468,48 @@ def logout():
     flash("You have been logged out.")
     return redirect(url_for('login'))
 
+@app.route('/user_tags', methods=['GET'])
+def user_tags():
+    """
+    Displays all document tags associated with the currently logged-in user.
+    """
+    # Ensure the user is logged in
+    user_id = session.get('UserID')
+    if not user_id:
+        flash("You must be logged in to view this page.")
+        return redirect(url_for('login'))
+
+    try:
+        # Define the SQL query
+        query = sqlalchemy.text("""
+            SELECT LOWER(dt.DocumentTagDesc) AS TagDesc, COUNT(dt.DocumentTagDesc) AS no_tags
+            FROM enum_lins(1) el
+            JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
+            JOIN Person AS p ON p.PersonID = lpc.PersonID
+            JOIN Lineages AS l ON l.LineageID = lpc.LineageID
+            JOIN Documents AS d ON d.AssociatedPersonID = p.PersonID
+            JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
+            JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
+            WHERE dt.AddedByUserID = :user_id
+            GROUP BY LOWER(dt.DocumentTagDesc)
+        """)
+
+        # Execute the query with the logged-in user's ID
+        result = g.conn.execute(query, {"user_id": user_id}).fetchall()
+
+        # Convert results to a list of dictionaries
+        tags = [{"tag_desc": row["TagDesc"], "no_tags": row["no_tags"]} for row in result]
+
+    except Exception as e:
+        # Log the error and flash a message
+        print(f"Database error: {e}")
+        tags = []
+        flash("An error occurred while fetching document tags.")
+
+    # Render the template with results
+    return render_template('user_tags.html', tags=tags, user_id=user_id)
+
+
 if __name__ == "__main__":
   import click
 
