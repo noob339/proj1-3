@@ -233,10 +233,10 @@ def person_details(personid):
         doc_date = request.form["doc_date"]
         tags_csv = request.form["tags"]
 
+        # Redirect to refresh the page with the updated data
         with engine.connect() as conn:
             return add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv)
 
-        # Redirect to refresh the page with the updated data
         
 
     # Fetch person details, relationships, and documentation
