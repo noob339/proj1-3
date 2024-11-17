@@ -3,9 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My App{% endblock %}</title>
+    <title>Home - My App</title>
+    <style>
+        body {
+            font-size: 15pt;
+            font-family: Arial, sans-serif;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+        }
+    </style>
 </head>
 <body>
+
+    <!-- Navigation -->
     <header>
         <nav>
             <a href="{{ url_for('index') }}">Home</a>
@@ -17,7 +32,6 @@
             {% endif %}
         </nav>
     </header>
-
     <main>
         <!-- Flash messages for errors or success -->
         {% with messages = get_flashed_messages() %}
