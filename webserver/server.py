@@ -62,7 +62,7 @@ conn.commit()
 def auth():
     # List of routes to exclude from the middleware check
     excluded_routes = ['index', 'login', 'register']
-    
+    return
     # Check if the route is excluded
     if request.endpoint in excluded_routes:
         return  # Skip the check for these routes
@@ -74,29 +74,31 @@ def auth():
 @app.route('/family_tree')
 def render_tree():
     with engine.connect() as conn:
+        # 6 default is for debugging auth middleware 
+        user_id = session.get("UserID", 6)
         # Fetch nodes
         nodes_query = sqlalchemy.text("""
         SELECT p.personid, p.firstname, p.lastname, p.associateduserid, l.lineagename 
-        FROM enum_lins(6) el
+        FROM enum_lins(:user_id) el
         JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
         JOIN Person AS p ON p.PersonID = lpc.PersonID
         JOIN Lineages AS l ON l.LineageID = lpc.LineageID;
         """)
-        nodes = conn.execute(nodes_query).fetchall()
+        nodes = conn.execute(nodes_query, {"user_id": user_id}).fetchall()
 
         # Fetch edges
         edges_query = sqlalchemy.text("""
         SELECT people.personid, r.directrelationship AS relatedtopersonid,
                rt.RelationshipTypeID, rt.RelationshipTypeDesc 
         FROM (SELECT p.*, l.lineagename 
-              FROM enum_lins(6) el
+              FROM enum_lins(:user_id) el
               JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
               JOIN Person AS p ON p.PersonID = lpc.PersonID
               JOIN Lineages AS l ON l.LineageID = lpc.LineageID) people
         JOIN Relations AS r ON r.personid = people.personid
         JOIN RelationshipTypes rt ON r.DirectRelationshipTypeID = rt.RelationshipTypeID;
         """)
-        edges = conn.execute(edges_query).fetchall()
+        edges = conn.execute(edges_query, {"user_id": user_id}).fetchall()
 
     # Create the graph
     graph = Graph(format="svg")
