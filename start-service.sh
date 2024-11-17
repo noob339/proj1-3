@@ -1,4 +1,4 @@
-#! /bin/zsh
+#! /bin/bash
 source ${HOME}/.bashrc
 sudo apt update
 sudo apt install graphviz
