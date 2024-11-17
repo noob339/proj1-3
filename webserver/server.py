@@ -330,7 +330,7 @@ def index():
   #
   # example of a database query 
   #
-  cursor = g.conn.execute(text("SELECT name FROM test"))
+  cursor = g.conn.execute(sqlalchemy.text("SELECT name FROM test"))
   g.conn.commit()
 
   # 2 ways to get results
