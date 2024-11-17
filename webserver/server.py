@@ -599,7 +599,8 @@ def user_tags():
         result = g.conn.execute(query, {"user_id": user_id})
 
         # Convert result to a list of dictionaries
-        tags = [{"tag_desc": row["tag_desc"], "no_tags": row["no_tags"]} for row in result.mappings()]
+        # tags = [{"tag_desc": row["tag_desc"], "no_tags": row["no_tags"]} for row in result.mappings()]
+        tags = [{"tag_desc": row[0], "no_tags": row[1]} for row in result]
 
         # Debugging
         print(f"UserID: {user_id}")
