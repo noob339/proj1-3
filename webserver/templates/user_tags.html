@@ -31,7 +31,7 @@
     <header>
         <nav>
             <a href="{{ url_for('index') }}">Home</a>
-            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('render_tree') }}">Family Tree</a>
             {% if 'UserID' in session %}
                 <a href="{{ url_for('logout') }}">Logout</a>
             {% endif %}

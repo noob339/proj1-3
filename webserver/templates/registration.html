@@ -20,7 +20,7 @@
     </header>
     <h1>Register</h1>
     <form method="post">
-        <!-- Username Field -->
+    <!-- Username Field -->
         <label for="username">Username:</label>
         <input type="text" name="username" id="username" value="{{ request.form.get('username', '') }}" required>
         <br>
@@ -33,6 +33,16 @@
         <!-- Password Field -->
         <label for="password">Password:</label>
         <input type="password" name="password" id="password" required>
+        <br>
+
+        <!-- First Name Field -->
+        <label for="first_name">First Name:</label>
+        <input type="text" name="first_name" id="first_name" value="{{ request.form.get('first_name', '') }}" required>
+        <br>
+
+        <!-- Last Name Field -->
+        <label for="last_name">Last Name:</label>
+        <input type="text" name="last_name" id="last_name" value="{{ request.form.get('last_name', '') }}" required>
         <br>
 
         <!-- Submit Button -->

@@ -481,6 +481,8 @@ def register():
         username = request.form['username']
         email = request.form.get('email')  # Optional email input
         password = request.form['password']
+        first_name = request.form.get('first_name')  # First Name input
+        last_name = request.form.get('last_name')  # Last Name input
         error = None
 
         if not username:
@@ -489,19 +491,40 @@ def register():
             error = 'Email is required.'
         elif not password:
             error = 'Password is required.'
+        elif not first_name:
+            error = 'First Name is required.'
+        elif not last_name:
+            error = 'Last Name is required.'
 
         if error is None:
             try:
-                query = sqlalchemy.text("""
+                # Insert user into Users table
+                user_query = sqlalchemy.text("""
                     INSERT INTO "users" ("username", "email", "password")
                     VALUES (:username, :email, :password)
+                    RETURNING "userid"
                 """)
-                g.conn.execute(
-                    query,
+                result = g.conn.execute(
+                    user_query,
                     {
                         "username": username,
                         "email": email,
                         "password": password,
+                    }
+                )
+                user_id = result.fetchone()[0]  # Get the generated UserID
+
+                # Insert person into Person table
+                person_query = sqlalchemy.text("""
+                    INSERT INTO "person" ("firstname", "lastname", "associateduserid")
+                    VALUES (:first_name, :last_name, :user_id)
+                """)
+                g.conn.execute(
+                    person_query,
+                    {
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "user_id": user_id,
                     }
                 )
                 g.conn.commit()
