@@ -171,17 +171,19 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
     """
     # Begin a transaction
     with conn.begin() as transaction:
+        user_id = session.get("UserID", 6)
+        person_id = get_associated_person_id(user_id, conn)
         try:
             user_id = session.get("UserID", None)
             # Insert the document into the Documents table
             insert_doc_query = sqlalchemy.text("""
-            INSERT INTO Documents (AssociatedPersonID, DocumentDesc, LinkToDoc, OccurrenceDate, AssociatedUserID)
-            VALUES (:personid, :doc_desc, :doc_link, :doc_date, :user_id)
+            INSERT INTO Documents (AssociatedPersonID, DocumentDesc, LinkToDoc, OccurrenceDate, PersonID)
+            VALUES (:personid, :doc_desc, :doc_link, :doc_date, :person_id)
             RETURNING DocumentID;
             """)
             result = conn.execute(
                 insert_doc_query,
-                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date, "user_id": user_id},
+                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date, "person_id": person_id},
             )
             document_id = result.fetchone().DocumentID
 
@@ -452,7 +454,7 @@ def login():
         session.clear()
         session['UserID'] = userid  # Set session user ID
         flash("Login successful!")
-        return redirect(url_for('index'))
+        return redirect(url_for('render_tree'))
 
     except Exception as e:
         error = f"Database error: {str(e)}"
