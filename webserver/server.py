@@ -439,7 +439,7 @@ def register():
 
 
 
-@bp.route('/login', methods=('GET', 'POST'))
+@app.route('/login', methods=('GET', 'POST'))
 def login():
     if request.method == 'POST':
         username = request.form['username']
@@ -478,14 +478,11 @@ def login():
     return render_template('login.html')
 
 
-@bp.route('/logout')
+@app.route('/logout')
 def logout():
     session.clear()
     flash("You have been logged out.")
     return redirect(url_for('auth.login'))
-
-
-app.register_blueprint(bp)
 
 if __name__ == "__main__":
   import click
