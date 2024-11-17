@@ -1,0 +1,26 @@
+graph G {
+    
+    "Node1" [
+        href="http://example.com/1";
+        tooltip="This is Node 1";
+    ];
+    
+    "Node2" [
+        href="http://example.com/2";
+        tooltip="This is Node 2";
+    ];
+    
+    "Node3" [
+        href="http://example.com/3";
+        tooltip="This is Node 3";
+    ];
+    
+
+    
+    "Node1" -- "Node2";
+    
+    "Node2" -- "Node3";
+    
+    "Node1" -- "Node3";
+    
+}

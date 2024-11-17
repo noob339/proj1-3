@@ -1,5 +1,7 @@
 #! /bin/zsh
 source ${HOME}/.bashrc
+sudo apt update
+sudo apt install graphviz
 
 cd /home/es4140/proj1-3/webserver
 export FLASK_ENV=development

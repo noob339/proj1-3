@@ -13,12 +13,34 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint, flash, url_for
-
+from jinja2 import Environment, FileSystemLoader
+from graphviz import Graph
+# Jinja2 Environment
+env = Environment(loader=FileSystemLoader("templates"))
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
 app.secret_key = os.urandom(24)
+import subprocess
+@app.route('/family_tree')
+def render_tree():
+    # Example graph data
+    nodes = {
+        "Node1": {"href": "http://example.com/1", "tooltip": "This is Node 1"},
+        "Node2": {"href": "http://example.com/2", "tooltip": "This is Node 2"},
+        "Node3": {"href": "http://example.com/3", "tooltip": "This is Node 3"},
+    }
+    edges = [("Node1", "Node2"), ("Node2", "Node3"), ("Node1", "Node3")]      # Generate the graph using Graphviz
+    graph = Graph(format="svg")  # Create an SVG graph
+    for node, attrs in nodes.items():
+        graph.node(node, href=attrs["href"], tooltip=attrs["tooltip"])
+    for edge in edges:
+        graph.edge(edge[0], edge[1])
+    # Render graph to SVG and send it as a response
+    svg = graph.pipe(format="svg").decode("utf-8")
+    return render_template("index.html", graph_svg=svg)
+
 #
 # The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
 #
