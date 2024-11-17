@@ -247,14 +247,57 @@ def register():
 
     return render_template('registration.html')
 
-app.register_blueprint(bp)
 
 
-@app.route('/login')
+
+
+@bp.route('/login', methods=('GET', 'POST'))
 def login():
-    abort(401)
-    this_is_never_executed()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        error = None
 
+        if not username:
+            error = 'Username is required.'
+        elif not password:
+            error = 'Password is required.'
+
+        if error is None:
+            try:
+                query = text("""
+                    SELECT * FROM users WHERE "UserName" = :username
+                """)
+                user = g.conn.execute(query, {"username": username}).fetchone()
+                g.conn.commit()
+                if user is None:
+                    error = 'Incorrect username.'
+                elif user["Password"] != password:  # Direct comparison since no hashing
+                    error = 'Incorrect password.'
+
+                if error is None:
+                    session.clear()
+                    session['user_id'] = user['UserID']  # Set session user ID
+                    flash("Login successful!")
+                    return redirect(url_for('index'))
+            except Exception as e:
+                error = f"Database error: {str(e)}"
+                print(error)  # Log it for debugging
+                flash(error)
+
+        flash(error)
+
+    return render_template('login.html')
+
+
+@bp.route('/logout')
+def logout():
+    session.clear()
+    flash("You have been logged out.")
+    return redirect(url_for('auth.login'))
+
+
+app.register_blueprint(bp)
 
 if __name__ == "__main__":
   import click
