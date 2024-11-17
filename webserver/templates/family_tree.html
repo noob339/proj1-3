@@ -13,6 +13,7 @@
             <a href="{{ url_for('index') }}">Home</a>
             {% if 'user_id' in session %}
                 <a href="{{ url_for('logout') }}">Logout</a>
+                <a href="{{ url_for('family_tree') }}">Family Tree</a>
             {% else %}
                 <a href="{{ url_for('login') }}">Login</a>
                 <a href="{{ url_for('register') }}">Register</a>
@@ -27,3 +28,26 @@
     {% endif %}
 </body>
 </html>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - My App</title>
+    <style>
+        body {
+            font-size: 15pt;
+            font-family: Arial, sans-serif;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
