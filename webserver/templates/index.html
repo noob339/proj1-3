@@ -19,12 +19,10 @@
     </style>
 </head>
 <body>
-
-    <!-- Navigation -->
     <header>
         <nav>
             <a href="{{ url_for('index') }}">Home</a>
-            {% if 'user_id' in session %}
+            {% if 'UserID' in session %}
                 <a href="{{ url_for('logout') }}">Logout</a>
                 <a href="{{ url_for('family_tree') }}">Family Tree</a>
             {% else %}
@@ -34,11 +32,10 @@
         </nav>
     </header>
 
-    <!-- Main Content -->
     <main>
         <h1>Welcome to My App</h1>
-        {% if 'user_id' in session %}
-            <p>Welcome back, user {{ session['user_id'] }}!</p>
+        {% if 'UserID' in session %}
+            <p>Welcome back, user {{ session['UserID'] }}!</p>
         {% else %}
             <p>Please log in or register to access more features.</p>
         {% endif %}
