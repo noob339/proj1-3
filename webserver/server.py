@@ -62,7 +62,7 @@ conn.commit()
 def auth():
     # List of routes to exclude from the middleware check
     excluded_routes = ['index', 'login', 'register']
-    return
+
     # Check if the route is excluded
     if request.endpoint in excluded_routes:
         return  # Skip the check for these routes
@@ -70,35 +70,70 @@ def auth():
     # Check if the session variable "user" is set
     if 'UserID' not in session:
         return render_template('index.html')
-    
+import sqlalchemy
+
+def get_associated_person_id(user_id, conn):
+    """
+    Retrieve the associated person_id for a given user_id.
+
+    Args:
+        user_id (int): The user ID to find the associated person_id for.
+        conn (sqlalchemy.engine.Connection): The database connection.
+
+    Returns:
+        int: The associated person_id if found, or None otherwise.
+    """
+    try:
+        # Query to find person_id where AssociatedUserID matches the user_id
+        query = sqlalchemy.text("""
+            SELECT person_id
+            FROM person
+            WHERE AssociatedUserID = :user_id
+        """)
+
+        # Execute the query
+        result = conn.execute(query, {"user_id": user_id}).fetchone()
+
+        # Return the person_id if a result is found
+        if result:
+            return result["person_id"]  # Adjust access if result is tuple or dict
+
+    except Exception as e:
+        # Log or handle the error
+        print(f"Database error: {str(e)}")
+
+    # Return None if no result or an error occurred
+    return None
+
 @app.route('/family_tree')
 def render_tree():
     with engine.connect() as conn:
         # 6 default is for debugging auth middleware 
         user_id = session.get("UserID", 6)
+        person_id = get_associated_person_id(user_id, conn)
         # Fetch nodes
         nodes_query = sqlalchemy.text("""
         SELECT p.personid, p.firstname, p.lastname, p.associateduserid, l.lineagename 
-        FROM enum_lins(:user_id) el
+        FROM enum_lins(:person_id) el
         JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
         JOIN Person AS p ON p.PersonID = lpc.PersonID
         JOIN Lineages AS l ON l.LineageID = lpc.LineageID;
         """)
-        nodes = conn.execute(nodes_query, {"user_id": user_id}).fetchall()
+        nodes = conn.execute(nodes_query, {"person_id": person_id}).fetchall()
 
         # Fetch edges
         edges_query = sqlalchemy.text("""
         SELECT people.personid, r.directrelationship AS relatedtopersonid,
                rt.RelationshipTypeID, rt.RelationshipTypeDesc 
         FROM (SELECT p.*, l.lineagename 
-              FROM enum_lins(:user_id) el
+              FROM enum_lins(:person_id) el
               JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
               JOIN Person AS p ON p.PersonID = lpc.PersonID
               JOIN Lineages AS l ON l.LineageID = lpc.LineageID) people
         JOIN Relations AS r ON r.personid = people.personid
         JOIN RelationshipTypes rt ON r.DirectRelationshipTypeID = rt.RelationshipTypeID;
         """)
-        edges = conn.execute(edges_query, {"user_id": user_id}).fetchall()
+        edges = conn.execute(edges_query, {"person_id": person_id}).fetchall()
 
     # Create the graph
     graph = Graph(format="svg")
@@ -314,76 +349,8 @@ def teardown_request(exception):
 
 @app.route('/')
 def index():
-  """
-  request is a special object that Flask provides to access web request information:
 
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments, e.g., {a:1, b:2} for http://localhost?a=1&b=2
-
-  See its API: https://flask.palletsprojects.com/en/2.0.x/api/?highlight=incoming%20request%20data
-
-  """
-
-  # DEBUG: this is debugging code to see what request looks like
-  print(request.args)
-
-
-  #
-  # example of a database query 
-  #
-  cursor = g.conn.execute(sqlalchemy.text("SELECT name FROM test"))
-  g.conn.commit()
-
-  # 2 ways to get results
-
-  # Method 1 - Indexing result by column number
-  names = []
-  for result in cursor:
-    names.append(result[0])  
-
-  # Method 2 - Indexing result by column name
-  # names = []
-  # results = cursor.mappings().all()
-  # for result in results:
-  #   names.append(result["name"])
-
-  cursor.close()
-
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #
-  #     # creates a <div> tag for each element in data
-  #     # will print:
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
-  context = dict(data = names)
-
-
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
-  return render_template("index.html", **context)
+  return render_template("index.html")
 
 #
 # This is an example of a different path.  You can see it at:
@@ -443,44 +410,54 @@ def register():
 
 @app.route('/login', methods=('GET', 'POST'))
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        error = None
+    # If the request is not POST, immediately render the login page
+    if request.method != 'POST':
+        return render_template('login.html')
 
-        if not username:
-            error = 'Username is required.'
-        elif not password:
-            error = 'Password is required.'
+    # Process POST request
+    username = request.form.get('username')
+    password = request.form.get('password')
 
-        if error is None:
-            try:
-                query = sqlalchemy.text("""
-                    SELECT userid, username, password FROM users WHERE "username" = :username
-                """)
-                user = g.conn.execute(query, {"username": username}).fetchone()
-                g.conn.commit()
-                with user as [userid, username, password]:
-                  if user is None:
-                      error = 'Incorrect username.'
-                  elif user["Password"] != password:  # Direct comparison since no hashing
-                      error = 'Incorrect password.'
+    # Validate input
+    if not username:
+        flash('Username is required.')
+        return render_template('login.html')
 
-                  if error is None:
-                      session.clear()
-                      session['UserID'] = userid  # Set session user ID
-                      flash("Login successful!")
-                      return redirect(url_for('index'))
-                  
-            except Exception as e:
-                error = f"Database error: {str(e)}"
-                print(error)  # Log it for debugging
-                flash(error)
+    if not password:
+        flash('Password is required.')
+        return render_template('login.html')
 
+    try:
+        # Query the database for the user
+        query = sqlalchemy.text("""
+            SELECT userid, username, password FROM users WHERE "username" = :username
+        """)
+        user = g.conn.execute(query, {"username": username}).fetchone()
+        g.conn.commit()
+
+        # Check if user exists
+        if user is None:
+            flash('Incorrect username.')
+            return render_template('login.html')
+
+        userid, db_username, db_password = user
+
+        # Validate password (no hashing for now)
+        if db_password != password:
+            flash('Incorrect password.')
+            return render_template('login.html')
+
+        # Successful login
+        session.clear()
+        session['UserID'] = userid  # Set session user ID
+        flash("Login successful!")
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        error = f"Database error: {str(e)}"
+        print(error)  # Log the error for debugging
         flash(error)
-
-    return render_template('login.html')
-
+        return render_template('login.html')
 
 @app.route('/logout')
 def logout():
