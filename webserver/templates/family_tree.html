@@ -8,6 +8,17 @@
 <body>
     <h1>Graph Visualization</h1>
 
+    <header>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            {% if 'user_id' in session %}
+                <a href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            {% endif %}
+        </nav>
+    </header>
     <form method="post">
         <button type="submit">Generate Graph</button>
     </form>
