@@ -172,20 +172,19 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
     # Begin a transaction
     with conn.begin() as transaction:
         user_id = session.get("UserID", 6)
-        person_id = get_associated_person_id(user_id, conn)
         try:
             user_id = session.get("UserID", None)
             # Insert the document into the Documents table
             insert_doc_query = sqlalchemy.text("""
-            INSERT INTO Documents (AssociatedPersonID, DocumentDesc, LinkToDoc, OccurrenceDate, PersonID)
-            VALUES (:personid, :doc_desc, :doc_link, :doc_date, :person_id)
+            INSERT INTO Documents (AssociatedPersonID, DocumentDesc, LinkToDoc, OccurrenceDate, addedbyuserid)
+            VALUES (:personid, :doc_desc, :doc_link, :doc_date, :user_id)
             RETURNING DocumentID;
             """)
             result = conn.execute(
                 insert_doc_query,
-                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date, "person_id": person_id},
+                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date, "user_id": user_id},
             )
-            document_id = result.fetchone().DocumentID
+            document_id = result.fetchone()[0]
 
             # Parse the CSV of tags
             tags = [tag.strip() for tag in tags_csv.split(",") if tag.strip()]
@@ -196,22 +195,23 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
             """)
             existing_tags = conn.execute(existing_tags_query, {"tags": tags}).fetchall()
 
-            existing_tag_map = {row.DocumentTagDesc: row.DocumentTagID for row in existing_tags}
+            existing_tag_map = {row[1]: row[0] for row in existing_tags}
             new_tags = [tag for tag in tags if tag not in existing_tag_map]
 
             # Insert missing tags into the DocumentTags table
             if new_tags:
                 insert_tags_query = sqlalchemy.text("""
-                INSERT INTO DocumentTags (DocumentTagDesc) VALUES (:tag) RETURNING DocumentTagID, DocumentTagDesc;
+                INSERT INTO DocumentTags (DocumentTagDesc, addedbyuserid) VALUES (:tag, :user_id) RETURNING DocumentTagID, DocumentTagDesc;
                 """)
                 for tag in new_tags:
-                    result = conn.execute(insert_tags_query, {"tag": tag})
+                    result = conn.execute(insert_tags_query, {"tag": tag, "user_id": user_id})
                     tag_row = result.fetchone()
-                    existing_tag_map[tag_row.DocumentTagDesc] = tag_row.DocumentTagID
+                    print(tag_row)
+                    existing_tag_map[tag_row[1]] = tag_row[0]
 
             # Map tags to the document in the DocumentTagMapping table
             insert_mapping_query = sqlalchemy.text("""
-            INSERT INTO DocumentTagMapping (DocumentID, DocumentTagID, AssociatedUserID) VALUES (:document_id, :tag_id, :user_id);
+            INSERT INTO DocumentTagMapping (DocumentID, DocumentTagID) VALUES (:document_id, :tag_id);
             """)
             for tag_id in existing_tag_map.values():
                 conn.execute(insert_mapping_query, {"document_id": document_id, "tag_id": tag_id, "user_id": user_id})
