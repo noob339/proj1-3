@@ -370,7 +370,7 @@ def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage
             """)
             result = conn.execute(
                 insert_person_query,
-                {"first_name": first_name, "last_name": last_name, "user_id": user_id}
+                {"first_name": first_name, "last_name": last_name, "user_id": None}
             )
             new_person_row = result.fetchone()
             if not new_person_row:
