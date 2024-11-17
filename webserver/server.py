@@ -70,7 +70,7 @@ def auth():
     # Check if the session variable "user" is set
     if 'UserID' not in session:
         return render_template('index.html')
-import sqlalchemy
+
 
 def get_associated_person_id(user_id, conn):
     """
@@ -86,17 +86,18 @@ def get_associated_person_id(user_id, conn):
     try:
         # Query to find person_id where AssociatedUserID matches the user_id
         query = sqlalchemy.text("""
-            SELECT person_id
+            SELECT personid
             FROM person
             WHERE AssociatedUserID = :user_id
         """)
 
         # Execute the query
         result = conn.execute(query, {"user_id": user_id}).fetchone()
-
+        person_id = result[0]
+        print(result)
         # Return the person_id if a result is found
         if result:
-            return result["person_id"]  # Adjust access if result is tuple or dict
+            return person_id  # Adjust access if result is tuple or dict
 
     except Exception as e:
         # Log or handle the error
