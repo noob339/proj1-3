@@ -479,10 +479,10 @@ def another():
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        email = request.form.get('email')  # Optional email input
+        email = request.form.get('email')  
         password = request.form['password']
-        first_name = request.form.get('first_name')  # First Name input
-        last_name = request.form.get('last_name')  # Last Name input
+        first_name = request.form.get('first_name')  
+        last_name = request.form.get('last_name')  
         error = None
 
         if not username:
@@ -498,7 +498,7 @@ def register():
 
         if error is None:
             try:
-                # Insert user into Users table
+                # Insert the user
                 user_query = sqlalchemy.text("""
                     INSERT INTO "users" ("username", "email", "password")
                     VALUES (:username, :email, :password)
@@ -512,9 +512,9 @@ def register():
                         "password": password,
                     }
                 )
-                user_id = result.fetchone()[0]  # Get the generated UserID
+                user_id = result.fetchone()[0] 
 
-                # Insert person into Person table
+                # insert the person
                 person_query = sqlalchemy.text("""
                     INSERT INTO "person" ("firstname", "lastname", "associateduserid")
                     VALUES (:first_name, :last_name, :user_id)
@@ -531,9 +531,8 @@ def register():
                 flash("Registration successful!")
                 return redirect(url_for('register'))
             except Exception as e:
-                # Capture the exact error for debugging
                 error = f"Database error: {str(e)}"
-                print(error)  # Log it for debugging
+                print(error)  
                 flash(error)
 
     return render_template('registration.html')
@@ -544,15 +543,15 @@ def register():
 
 @app.route('/login', methods=('GET', 'POST'))
 def login():
-    # If the request is not POST, immediately render the login page
+    # Show the login if its not post
     if request.method != 'POST':
         return render_template('login.html')
 
-    # Process POST request
+    # Get the post request
     username = request.form.get('username')
     password = request.form.get('password')
 
-    # Validate input
+    # Some input validation for username and pword
     if not username:
         flash('Username is required.')
         return render_template('login.html')
@@ -562,7 +561,7 @@ def login():
         return render_template('login.html')
 
     try:
-        # Query the database for the user
+        # Query db for the user
         query = sqlalchemy.text("""
             SELECT userid, username, password FROM users WHERE "username" = :username
         """)
@@ -576,12 +575,12 @@ def login():
 
         userid, db_username, db_password = user
 
-        # Validate password (no hashing for now)
+        # Check if password valid (no hashing for now)
         if db_password != password:
             flash('Incorrect password.')
             return render_template('login.html')
 
-        # Successful login
+        # Signifis a succesful login
         session.clear()
         session['UserID'] = userid  # Set session user ID
         flash("Login successful!")
@@ -589,7 +588,7 @@ def login():
 
     except Exception as e:
         error = f"Database error: {str(e)}"
-        print(error)  # Log the error for debugging
+        print(error) 
         flash(error)
         return render_template('login.html')
 
@@ -600,22 +599,24 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/user_tags', methods=['GET'])
+@app.route('/user_tags', methods=['GET', 'POST'])
 def user_tags():
-    # Ensure the user is logged in
     user_id = session.get('UserID')
     if not user_id:
         flash("You must be logged in to view your document tags.")
         return redirect(url_for('login'))
 
-    # Retrieve the associated person_id for the logged-in user
     person_id = get_associated_person_id(user_id, g.conn)
     if not person_id:
         flash("No associated person found for the logged-in user.")
         return redirect(url_for('index'))
 
+    # Toggle check real quick
+    filter_by_user = request.form.get('filter_by_user') == 'on'
+
+    print(f"Filter by user toggle: {filter_by_user}")  
+
     try:
-        # Fetch tags from the database using the person_id
         query = sqlalchemy.text("""
             SELECT LOWER(dt.DocumentTagDesc) AS tag_desc, COUNT(dt.DocumentTagDesc) AS no_tags
             FROM enum_lins(:person_id) el
@@ -625,15 +626,21 @@ def user_tags():
             JOIN Documents AS d ON d.AssociatedPersonID = p.PersonID
             JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
             JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
+            WHERE (:filter_by_user IS FALSE OR d.AddedByUserID = :user_id)
             GROUP BY LOWER(dt.DocumentTagDesc)
         """)
-        result = g.conn.execute(query, {"person_id": person_id})
 
-        # Convert result to a list of dictionaries
+        # Run da query
+        result = g.conn.execute(query, {
+            "person_id": person_id,
+            "user_id": user_id,
+            "filter_by_user": filter_by_user
+        }).fetchall()
+
+        # Save it in a list
         tags = [{"tag_desc": row[0], "no_tags": row[1]} for row in result]
 
-        # Debugging
-        print(f"UserID: {user_id}, PersonID: {person_id}")
+        # Print on the console to see if the tags exists 
         print(f"Tags: {tags}")
 
     except Exception as e:
@@ -641,7 +648,7 @@ def user_tags():
         print(f"Error: {e}")
         tags = []
 
-    return render_template('user_tags.html', tags=tags, UserID=user_id)
+    return render_template('user_tags.html', tags=tags, UserID=user_id, filter_by_user=filter_by_user)
 
 
 

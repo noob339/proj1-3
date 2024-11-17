@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document Tags for User {{ UserID }}</title>
+    <title>Document Tags</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 15pt;
+            margin: 20px;
+        }
+        nav a {
+            margin-right: 15px;
         }
         table {
             width: 100%;
@@ -15,15 +18,14 @@
             margin-top: 20px;
         }
         table, th, td {
-            border: 1px solid black;
+            border: 1px solid #ccc;
         }
         th, td {
             padding: 10px;
             text-align: left;
         }
-        nav a {
-            margin-right: 15px;
-            text-decoration: none;
+        th {
+            background-color: #f4f4f4;
         }
     </style>
 </head>
@@ -31,16 +33,27 @@
     <header>
         <nav>
             <a href="{{ url_for('index') }}">Home</a>
-            <a href="{{ url_for('render_tree') }}">Family Tree</a>
             {% if 'UserID' in session %}
                 <a href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
             {% endif %}
         </nav>
     </header>
-
     <main>
         <h1>Document Tags for User {{ UserID }}</h1>
 
+        <!-- Toggle Filter Form -->
+        <form method="post">
+            <label>
+                <input type="checkbox" name="filter_by_user" 
+                       {% if filter_by_user %}checked{% endif %}>
+                Show only documents I added
+            </label>
+            <button type="submit">Apply Filter</button>
+        </form>
+
+        <!-- Tags Table -->
         {% if tags %}
             <table>
                 <thead>
@@ -59,7 +72,7 @@
                 </tbody>
             </table>
         {% else %}
-            <p>No tags found for this user.</p>
+            <p>No tags found for this user or their lineage.</p>
         {% endif %}
     </main>
 </body>
