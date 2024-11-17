@@ -470,19 +470,15 @@ def logout():
 
 @app.route('/user_tags', methods=['GET'])
 def user_tags():
-    """
-    Displays all document tags associated with the currently logged-in user.
-    """
-    # Ensure the user is logged in
     user_id = session.get('UserID')
     if not user_id:
-        flash("You must be logged in to view this page.")
+        flash("You must be logged in to view your document tags.")
         return redirect(url_for('login'))
 
     try:
-        # Define the SQL query
+        # Fetch tags from the database
         query = sqlalchemy.text("""
-            SELECT LOWER(dt.DocumentTagDesc) AS TagDesc, COUNT(dt.DocumentTagDesc) AS no_tags
+            SELECT LOWER(dt.DocumentTagDesc) TagDesc, COUNT(dt.DocumentTagDesc) no_tags
             FROM enum_lins(1) el
             JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
             JOIN Person AS p ON p.PersonID = lpc.PersonID
@@ -490,24 +486,24 @@ def user_tags():
             JOIN Documents AS d ON d.AssociatedPersonID = p.PersonID
             JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
             JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
-            WHERE dt.AddedByUserID = :user_id
             GROUP BY LOWER(dt.DocumentTagDesc)
         """)
+        result = g.conn.execute(query, {"user_id": user_id})
 
-        # Execute the query with the logged-in user's ID
-        result = g.conn.execute(query, {"user_id": user_id}).fetchall()
+        # Convert result to a list of dictionaries
+        tags = [{"tag_desc": row["tag_desc"], "no_tags": row["no_tags"]} for row in result.mappings()]
 
-        # Convert results to a list of dictionaries
-        tags = [{"tag_desc": row["TagDesc"], "no_tags": row["no_tags"]} for row in result]
+        # Debugging
+        print(f"UserID: {user_id}")
+        print(f"Tags: {tags}")
 
     except Exception as e:
-        # Log the error and flash a message
-        print(f"Database error: {e}")
+        flash(f"Error fetching tags: {e}")
+        print(f"Error: {e}")
         tags = []
-        flash("An error occurred while fetching document tags.")
 
-    # Render the template with results
-    return render_template('user_tags.html', tags=tags, user_id=user_id)
+    return render_template('user_tags.html', tags=tags, UserID=user_id)
+
 
 
 if __name__ == "__main__":
