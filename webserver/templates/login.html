@@ -1,29 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - My App</title>
+    <style>
+        body {
+            font-size: 15pt;
+            font-family: Arial, sans-serif;
+        }
+        nav {
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
 
-{% block content %}
-<h1>Login</h1>
-<form method="post">
-    <!-- Username Field -->
-    <label for="username">Username:</label>
-    <input type="text" name="username" id="username" value="{{ request.form.get('username', '') }}" required>
-    <br>
-
-    <!-- Password Field -->
-    <label for="password">Password:</label>
-    <input type="password" name="password" id="password" required>
-    <br>
-
-    <!-- Submit Button -->
-    <button type="submit">Login</button>
-</form>
-
-<!-- Display Flash Messages -->
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-        <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
-{% endblock %}
+    <!-- Navigation -->
+    <header>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            {% if 'user_id' in session %}
+                <a href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+                <a href="{{ url_for('register') }}">Register</a>
+            {% endif %}
+        </nav>
+    </header>
+    <main>
+        <!-- Flash messages for errors or success -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li style="color: red;">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    
+        <!-- Login form -->
+        <form method="post" action="{{ url_for('login') }}">
+            <div>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div>
+                <button type="submit">Login</button>
+            </div>
+        </form>
+    
+        <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a>.</p>
+    
+    </main>
+</body>
+</html>

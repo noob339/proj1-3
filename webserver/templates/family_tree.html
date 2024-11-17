@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graph Visualization</title>
+    <title>Family Tree</title>
 </head>
 <body>
-    <h1>Graph Visualization</h1>
+    <h1>Family Tree</h1>
 
     <header>
         <nav>
@@ -19,12 +19,8 @@
             {% endif %}
         </nav>
     </header>
-    <form method="post">
-        <button type="submit">Generate Graph</button>
-    </form>
 
     {% if graph_svg %}
-    <h2>Generated Graph:</h2>
     <div>
         {{ graph_svg|safe }}
     </div>
