@@ -222,25 +222,53 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
             transaction.rollback()
             raise e  # Re-raise the exception for further handling
 
-
-
 @app.route("/person/<int:personid>", methods=["GET", "POST"])
 def person_details(personid):
+    user_id = session.get("UserID", 6)  # Default UserID to 6 if not in session
+
     if request.method == "POST":
-        # Handle the POST request in a separate function
-        doc_desc = request.form["doc_desc"]
-        doc_link = request.form["doc_link"]
-        doc_date = request.form["doc_date"]
-        tags_csv = request.form["tags"]
-
-        # Redirect to refresh the page with the updated data
-        with engine.connect() as conn:
-            return add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv)
-
+        form_type = request.form.get("form_type")
         
+        with engine.connect() as conn:
+            if form_type == "add_document":
+                # Handle adding a document
+                doc_desc = request.form["doc_desc"]
+                doc_link = request.form["doc_link"]
+                doc_date = request.form["doc_date"]
+                tags_csv = request.form["tags"]
+                add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv)
+            
+            elif form_type == "add_person":
+                # Handle adding a new person
+                first_name = request.form["first_name"]
+                last_name = request.form["last_name"]
+                lineage_id = int(request.form["lineage_id"])
+                relationship_type_id = int(request.form["relationship_type_id"])
+                new_person_id = add_person(conn, first_name, last_name, user_id, personid, lineage_id, relationship_type_id)
 
-    # Fetch person details, relationships, and documentation
+                # Redirect to the new person's details page
+                return redirect(url_for("person_details", personid=new_person_id))
+
+        return redirect(url_for("person_details", personid=personid))
+
+    # Fetch lineages and relationship types for the form
     with engine.connect() as conn:
+        # Fetch lineages
+        lineages_query = sqlalchemy.text("""
+            SELECT LineageID AS lineage_id, LineageName AS lineage_name
+            FROM Lineages
+            WHERE IsActive = TRUE
+        """)
+        lineages = conn.execute(lineages_query).fetchall()
+
+        # Fetch relationship types
+        relationship_types_query = sqlalchemy.text("""
+            SELECT RelationshipTypeID AS relationship_type_id, RelationshipTypeDesc AS relationship_desc
+            FROM RelationshipTypes
+            WHERE IsActive = TRUE
+        """)
+        relationship_types = conn.execute(relationship_types_query).fetchall()
+
         # Fetch person details
         person_query = sqlalchemy.text("""
         SELECT p.personid, p.firstname, p.lastname, p.associateduserid, l.lineagename 
@@ -251,33 +279,32 @@ def person_details(personid):
         """)
         person_result = conn.execute(person_query, {"personid": personid}).fetchone()
 
-        # If person not found, return 404
         if not person_result:
             return f"Person with ID {personid} not found", 404
 
         # Fetch relationships
         relationships_query = sqlalchemy.text("""
-        SELECT Person.PersonID AS RelatedToPersonID, Person.FirstName, Person.LastName, rt.RelationshipTypeDesc 
-        FROM Relations AS r
-        JOIN RelationshipTypes AS rt ON r.DirectRelationshipTypeID = rt.RelationshipTypeID
-        JOIN Person ON Person.PersonID = r.directrelationship
-        WHERE r.personid = :personid;
+            SELECT Person.PersonID AS related_to, Person.FirstName, Person.LastName, rt.RelationshipTypeDesc 
+            FROM Relations AS r
+            JOIN RelationshipTypes AS rt ON r.DirectRelationshipTypeID = rt.RelationshipTypeID
+            JOIN Person ON Person.PersonID = r.directrelationship
+            WHERE r.personid = :personid;
         """)
         relationships = conn.execute(relationships_query, {"personid": personid}).fetchall()
+
 
         # Fetch documentation
         documentation_query = sqlalchemy.text("""
         SELECT d.DocumentID, d.DocumentDesc, d.LinkToDoc, d.OccurrenceDate, 
                STRING_AGG(dt.DocumentTagDesc, ',') AS tags
         FROM Documents AS d
-        JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
-        JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
+        LEFT JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
+        LEFT JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
         WHERE d.AssociatedPersonID = :personid
         GROUP BY d.DocumentID, d.DocumentDesc, d.LinkToDoc, d.OccurrenceDate;
         """)
         documentation = conn.execute(documentation_query, {"personid": personid}).fetchall()
 
-    # Render the template
     return render_template(
         "person_details.html",
         person={
@@ -288,24 +315,105 @@ def person_details(personid):
             "lineagename": person_result.lineagename,
         },
         relationships=[
-            {"related_to": RelatedToPersonID, "relationship_desc": RelationshipTypeDesc, "FirstName": FirstName, "LastName": LastName}
-            for RelatedToPersonID, FirstName, LastName, RelationshipTypeDesc in relationships
+            {
+              "related_to": relationship[0],
+              "relationship_desc": relationship[3],
+              "FirstName": relationship[1],
+              "LastName": relationship[2],
+            }
+            for relationship in relationships
         ],
         documentation=[
             {
-                "doc_id": DocumentID,
-                "desc":   DocumentDesc,
-                "link":   LinkToDoc,
-                "date":   OccurrenceDate,
-                "tags":   tags,
+                "doc_id": doc[0],
+                "desc": doc[1],
+                "link": doc[2],
+                "date": doc[3],
+                "tags": doc[4],
             }
-            for DocumentID,
-                DocumentDesc,
-                LinkToDoc,
-                OccurrenceDate,
-                tags, in documentation
+            for doc in documentation
+        ],
+        lineages=[
+            {"lineage_id": lineage.lineage_id, "lineage_name": lineage.lineage_name}
+            for lineage in lineages
+        ],
+        relationship_types=[
+            {"relationship_type_id": rel.relationship_type_id, "relationship_desc": rel.relationship_desc}
+            for rel in relationship_types
         ],
     )
+
+
+def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage_id, relationship_type_id):
+    """
+    Adds a new person and updates relevant tables with lineage and relationship data.
+
+    Args:
+        conn: The database connection.
+        first_name (str): First name of the new person.
+        last_name (str): Last name of the new person.
+        user_id (int): Associated user ID.
+        existing_person_id (int): The person ID of the existing person.
+        lineage_id (int): The lineage ID selected from the form.
+        relationship_type_id (int): The relationship type ID selected from the form.
+
+    Returns:
+        int: The PersonID of the newly created person.
+    """
+    try:
+        with conn.begin() as transaction:
+            # Insert new person into the Person table
+            insert_person_query = sqlalchemy.text("""
+                INSERT INTO Person (FirstName, LastName, AssociatedUserID)
+                VALUES (:first_name, :last_name, :user_id)
+                RETURNING PersonID
+            """)
+            result = conn.execute(
+                insert_person_query,
+                {"first_name": first_name, "last_name": last_name, "user_id": user_id}
+            )
+            new_person_row = result.fetchone()
+            if not new_person_row:
+                raise ValueError("Failed to insert new person.")
+            new_person_id = new_person_row[0]
+
+            # Insert into Relations table
+            insert_relation_query = sqlalchemy.text("""
+                INSERT INTO Relations (PersonID, DirectRelationship, DirectRelationshipTypeID)
+                VALUES (:existing_person_id, :new_person_id, :relationship_type_id)
+            """)
+            conn.execute(
+                insert_relation_query,
+                {
+                    "existing_person_id": existing_person_id,
+                    "new_person_id": new_person_id,
+                    "relationship_type_id": relationship_type_id,
+                }
+            )
+            conn.execute(
+                insert_relation_query,
+                {
+                    "existing_person_id": new_person_id,
+                    "new_person_id": existing_person_id,
+                    "relationship_type_id": relationship_type_id,
+                }
+            )
+
+            # Insert into LineagePersonConnector table
+            insert_lineage_person_query = sqlalchemy.text("""
+                INSERT INTO LineagePersonConnector (PersonID, LineageID)
+                VALUES (:new_person_id, :lineage_id)
+            """)
+            conn.execute(
+                insert_lineage_person_query,
+                {"new_person_id": new_person_id, "lineage_id": lineage_id}
+            )
+
+            return new_person_id
+
+    except Exception as e:
+        print(f"Error in add_person: {e}")
+        raise
 
 
 @app.before_request

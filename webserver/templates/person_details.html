@@ -13,59 +13,87 @@
             <a href="{{ url_for('render_tree') }}">Back</a>
             
         </nav>
-    </header>
-    <h1>Person Details</h1>
-
-    <h2>Basic Information</h2>
-    <p>
-        <strong>Person ID:</strong> {{ person.personid }}<br>
-        <strong>Name:</strong> {{ person.firstname }} {{ person.lastname }}<br>
-        <strong>Associated User ID:</strong> {{ person.associateduserid }}<br>
-        <strong>Lineage Name:</strong> {{ person.lineagename }}
-    </p>
-
-    <h2>Direct Relationships</h2>
-    {% if relationships %}
-        <div>
-        {% for relationship in relationships %}
+        <h1>Person Details</h1>
+    
+        <h2>Basic Information</h2>
+        <p>
+            <strong>Person ID:</strong> {{ person.personid }}<br>
+            <strong>Name:</strong> {{ person.firstname }} {{ person.lastname }}<br>
+            <strong>Associated User ID:</strong> {{ person.associateduserid }}<br>
+            <strong>Lineage Name:</strong> {{ person.lineagename }}
+        </p>
+    
+        <h2>Direct Relationships</h2>
+        {% if relationships %}
             <div>
-                <strong>ID:</strong> {{ relationship.related_to }}<br>
-                <strong>Name:</strong> {{ relationship.FirstName }}  {{ relationship.LastName }}<br>
-                <strong>Relationship:</strong> {{ relationship.relationship_desc }}<br><br>
+            {% for relationship in relationships %}
+                <div>
+                    <strong>ID:</strong> {{ relationship.related_to }}<br>
+                    <strong>Name:</strong> {{ relationship.FirstName }}  {{ relationship.LastName }}<br>
+                    <strong>Relationship:</strong> {{ relationship.relationship_desc }}<br><br>
+                </div>
+            {% endfor %}
             </div>
-        {% endfor %}
-        </div>
-    {% else %}
-        <p>No relationships found for this person.</p>
-    {% endif %}
-
-    <h2>Documentation</h2>
-    {% if documentation %}
-        <ul>
-        {% for doc in documentation %}
-            <li>
-                <strong>Description:</strong> {{ doc.desc }}<br>
-                <strong>Link:</strong> <a href="{{ doc.link }}">{{ doc.link }}</a><br>
-                <strong>Date:</strong> {{ doc.date }}<br>
-                <strong>Tags:</strong> {{ doc.tags }}
-            </li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>No documentation found for this person.</p>
-    {% endif %}
-
-    <h2>Add Documentation</h2>
-    <form method="post">
-        <label for="doc_desc">Description:</label><br>
-        <input type="text" id="doc_desc" name="doc_desc" required><br>
-        <label for="doc_link">Link:</label><br>
-        <input type="url" id="doc_link" name="doc_link" required><br>
-        <label for="doc_date">Date:</label><br>
-        <input type="date" id="doc_date" name="doc_date" required><br>
-        <label for="tags">Tags (comma-separated):</label><br>
-        <input type="text" id="tags" name="tags" placeholder="tag1, tag2"><br><br>
-        <button type="submit">Add Documentation</button>
-    </form>
-</body>
-</html>
+        {% else %}
+            <p>No relationships found for this person.</p>
+        {% endif %}
+    
+        <h2>Documentation</h2>
+        {% if documentation %}
+            <ul>
+            {% for doc in documentation %}
+                <li>
+                    <strong>Description:</strong> {{ doc.desc }}<br>
+                    <strong>Link:</strong> <a href="{{ doc.link }}">{{ doc.link }}</a><br>
+                    <strong>Date:</strong> {{ doc.date }}<br>
+                    <strong>Tags:</strong> {{ doc.tags }}
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>No documentation found for this person.</p>
+        {% endif %}
+    
+        <h2>Add Documentation</h2>
+        <form method="post">
+            <input type="hidden" name="form_type" value="add_document">
+            <label for="doc_desc">Description:</label><br>
+            <input type="text" id="doc_desc" name="doc_desc" required><br>
+            <label for="doc_link">Link:</label><br>
+            <input type="url" id="doc_link" name="doc_link" required><br>
+            <label for="doc_date">Date:</label><br>
+            <input type="date" id="doc_date" name="doc_date" required><br>
+            <label for="tags">Tags (comma-separated):</label><br>
+            <input type="text" id="tags" name="tags" placeholder="tag1, tag2"><br><br>
+            <button type="submit">Add Documentation</button>
+        </form>
+    
+        <h2>Add Person</h2>
+        <form method="post">
+            <input type="hidden" name="form_type" value="add_person">
+            
+            <label for="first_name">First Name:</label><br>
+            <input type="text" id="first_name" name="first_name" required><br>
+            
+            <label for="last_name">Last Name:</label><br>
+            <input type="text" id="last_name" name="last_name" required><br>
+            
+            <label for="lineage_id">Select Lineage:</label><br>
+            <select id="lineage_id" name="lineage_id" required>
+                {% for lineage in lineages %}
+                    <option value="{{ lineage.lineage_id }}">{{ lineage.lineage_name }}</option>
+                {% endfor %}
+            </select><br>
+            
+            <label for="relationship_type_id">Select Relationship Type:</label><br>
+            <select id="relationship_type_id" name="relationship_type_id" required>
+                {% for relationship in relationship_types %}
+                    <option value="{{ relationship.relationship_type_id }}">{{ relationship.relationship_desc }}</option>
+                {% endfor %}
+            </select><br><br>
+            
+            <button type="submit">Add Person</button>
+        </form>
+    </body>
+    </html>
+    
