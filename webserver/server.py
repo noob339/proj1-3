@@ -12,13 +12,13 @@ import os
   # accessible as a variable in index.html:
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint
+from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint, flash, url_for
 
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
-
+app.secret_key = os.urandom(24)
 #
 # The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
 #
@@ -203,29 +203,25 @@ def register():
         if error is None:
             try:
                 query = text("""
-                    INSERT INTO "Users" ("UserName", "Email", "Password")
+                    INSERT INTO users ("username", "email", "password")
                     VALUES (:username, :email, :password)
                 """)
-                conn.execute(
+                g.conn.execute(
                     query,
                     {
                         "username": username,
                         "email": email,
-                        "password": generate_password_hash(password),
+                        "password": password,
                     }
                 )
-            except IntegrityError as e:
-                if 'unique constraint' in str(e.orig):
-                    if 'UserName' in str(e.orig):
-                        error = f"Username {username} is already registered."
-                    elif 'Email' in str(e.orig):
-                        error = f"Email {email} is already registered."
-                else:
-                    error = "An unexpected error occurred. Please try again."
-            else:
-                return redirect(url_for("auth.register"))
-
-        flash(error)
+                g.conn.commit()
+                flash("Registration successful!")
+                return redirect(url_for('auth.register'))
+            except Exception as e:
+                # Capture the exact error for debugging
+                error = f"Database error: {str(e)}"
+                print(error)  # Log it for debugging
+                flash(error)
 
     return render_template('registration.html')
 
