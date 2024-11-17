@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Person Details</title>
+</head>
+<body>
+    <h1>Person Details</h1>
+
+    <h2>Basic Information</h2>
+    <p>
+        <strong>Person ID:</strong> {{ person.personid }}<br>
+        <strong>Name:</strong> {{ person.firstname }} {{ person.lastname }}<br>
+        <strong>Associated User ID:</strong> {{ person.associateduserid }}<br>
+        <strong>Lineage Name:</strong> {{ person.lineagename }}
+    </p>
+
+    <h2>Direct Relationships</h2>
+    {% if relationships %}
+        <div>
+        {% for relationship in relationships %}
+            <div>
+                <strong>ID:</strong> {{ relationship.related_to }}<br>
+                <strong>Name:</strong> {{ relationship.FirstName }}  {{ relationship.LastName }}<br>
+                <strong>Relationship:</strong> {{ relationship.relationship_desc }}<br><br>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p>No relationships found for this person.</p>
+    {% endif %}
+
+    <h2>Documentation</h2>
+    {% if documentation %}
+        <ul>
+        {% for doc in documentation %}
+            <li>
+                <strong>Description:</strong> {{ doc.desc }}<br>
+                <strong>Link:</strong> <a href="{{ doc.link }}">{{ doc.link }}</a><br>
+                <strong>Date:</strong> {{ doc.date }}<br>
+                <strong>Tags:</strong> {{ doc.tags }}
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No documentation found for this person.</p>
+    {% endif %}
+
+    <h2>Add Documentation</h2>
+    <form method="post">
+        <label for="doc_desc">Description:</label><br>
+        <input type="text" id="doc_desc" name="doc_desc" required><br>
+        <label for="doc_link">Link:</label><br>
+        <input type="url" id="doc_link" name="doc_link" required><br>
+        <label for="doc_date">Date:</label><br>
+        <input type="date" id="doc_date" name="doc_date" required><br>
+        <label for="tags">Tags (comma-separated):</label><br>
+        <input type="text" id="tags" name="tags" placeholder="tag1, tag2"><br><br>
+        <button type="submit">Add Documentation</button>
+    </form>
+</body>
+</html>
