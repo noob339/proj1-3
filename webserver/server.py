@@ -12,7 +12,7 @@ import os
   # accessible as a variable in index.html:
 import sqlalchemy
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, session, render_template, g, redirect, Response, abort, Blueprint, flash, url_for
+from flask import Flask, request, session, render_template, g, redirect, Response, abort, flash, url_for
 from jinja2 import Environment, FileSystemLoader
 from graphviz import Graph, Digraph
 # Jinja2 Environment
