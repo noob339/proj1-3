@@ -13,7 +13,7 @@
             <a href="{{ url_for('index') }}">Home</a>
             {% if 'UserID' in session %}
                 <a href="{{ url_for('logout') }}">Logout</a>
-                <a href="{{ url_for('render_tree') }}">Family Tree</a>
+                <a href="{{ url_for('user_tags') }}">Document Tags</a>
             {% else %}
                 <a href="{{ url_for('login') }}">Login</a>
                 <a href="{{ url_for('register') }}">Register</a>

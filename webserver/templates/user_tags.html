@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Tags for User {{ user_id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 15pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        nav a {
+            margin-right: 15px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('login') }}">Login</a>
+            {% if 'UserID' in session %}
+                <a href="{{ url_for('logout') }}">Logout</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        <h1>Document Tags for User {{ user_id }}</h1>
+
+        {% if tags %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tag Description</th>
+                        <th>Number of Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tag in tags %}
+                        <tr>
+                            <td>{{ tag.tag_desc }}</td>
+                            <td>{{ tag.no_tags }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No tags found for this user.</p>
+        {% endif %}
+    </main>
+</body>
+</html>
