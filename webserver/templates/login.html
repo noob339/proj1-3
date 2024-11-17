@@ -1,25 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My App{% endblock %}</title>
-</head>
-<body>
-    <header>
-        <nav>
-            <a href="{{ url_for('index') }}">Home</a>
-            {% if 'user_id' in session %}
-                <a href="{{ url_for('logout') }}">Logout</a>
-            {% else %}
-                <a href="{{ url_for('login') }}">Login</a>
-                <a href="{{ url_for('register') }}">Register</a>
-            {% endif %}
-        </nav>
-    </header>
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-</body>
-</html>
+{% block content %}
+<h1>Login</h1>
+<form method="post">
+    <!-- Username Field -->
+    <label for="username">Username:</label>
+    <input type="text" name="username" id="username" value="{{ request.form.get('username', '') }}" required>
+    <br>
+
+    <!-- Password Field -->
+    <label for="password">Password:</label>
+    <input type="password" name="password" id="password" required>
+    <br>
+
+    <!-- Submit Button -->
+    <button type="submit">Login</button>
+</form>
+
+<!-- Display Flash Messages -->
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+{% endblock %}
