@@ -599,18 +599,26 @@ def logout():
     flash("You have been logged out.")
     return redirect(url_for('login'))
 
+
 @app.route('/user_tags', methods=['GET'])
 def user_tags():
+    # Ensure the user is logged in
     user_id = session.get('UserID')
     if not user_id:
         flash("You must be logged in to view your document tags.")
         return redirect(url_for('login'))
 
+    # Retrieve the associated person_id for the logged-in user
+    person_id = get_associated_person_id(user_id, g.conn)
+    if not person_id:
+        flash("No associated person found for the logged-in user.")
+        return redirect(url_for('index'))
+
     try:
-        # Fetch tags from the database
+        # Fetch tags from the database using the person_id
         query = sqlalchemy.text("""
-            SELECT LOWER(dt.DocumentTagDesc) TagDesc, COUNT(dt.DocumentTagDesc) no_tags
-            FROM enum_lins(1) el
+            SELECT LOWER(dt.DocumentTagDesc) AS tag_desc, COUNT(dt.DocumentTagDesc) AS no_tags
+            FROM enum_lins(:person_id) el
             JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
             JOIN Person AS p ON p.PersonID = lpc.PersonID
             JOIN Lineages AS l ON l.LineageID = lpc.LineageID
@@ -619,14 +627,13 @@ def user_tags():
             JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
             GROUP BY LOWER(dt.DocumentTagDesc)
         """)
-        result = g.conn.execute(query, {"user_id": user_id})
+        result = g.conn.execute(query, {"person_id": person_id})
 
         # Convert result to a list of dictionaries
-        # tags = [{"tag_desc": row["tag_desc"], "no_tags": row["no_tags"]} for row in result.mappings()]
         tags = [{"tag_desc": row[0], "no_tags": row[1]} for row in result]
 
         # Debugging
-        print(f"UserID: {user_id}")
+        print(f"UserID: {user_id}, PersonID: {person_id}")
         print(f"Tags: {tags}")
 
     except Exception as e:
@@ -635,6 +642,7 @@ def user_tags():
         tags = []
 
     return render_template('user_tags.html', tags=tags, UserID=user_id)
+
 
 
 
