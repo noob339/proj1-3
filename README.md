@@ -6,15 +6,15 @@ The user is able to register and log in
 
 Upon logging in, the user will be able to view their family tree. They can click on a node within their family tree and that person's detail will be displayed. 
 
-They are also able to add documents for said person
+They are also able to add documents for a specific person, including themselves.
 
 The user is able to see all of the tags within their family and the tags they specifically created. 
 
 Users are able to add documentation and add people to their family trees as well. 
 
-The primary web page would be the family tree itself. It was implemented using the graphviz package. It’s a tree containing the nodes of all belonging to the family lineage with the user logged in at the center. 
+The primary web page would be the family tree itself. It was implemented using the graphviz package. It’s a tree containing the nodes of all belonging to the family lineage with the user logged in at the center. It utilizes two complex queries involving multiple relationships where the first retrieves all the nodes of the graphs while the second retrieves all the edges of the graphs allowing us to build and render the family tree associated with the user. 
 
-Another interesting web page is the layout of the person's details upon clicking on a node within the tree. It displays their info, allows you add documents and add other people related to the person as well. 
+Another interesting web page is the layout of the person's details upon clicking on a node within the tree. It displays their info and allows you add documents and add other people related to the person as well. It involves multiple queries to multiple entities to be able to gather all this information. We made queries to retrieve the user's lineage, their relationships, their relationship types,  their personal details and their documents. Its interesting to bring this to life allowing us to interact with a majority of the relations in our tables in order to build a page that serves both as an informational resource for the user but also a way to add other people to their tree as well as add documents.  
 
 We needed to add another entity for the relationship types in order to simplify the addition of a relative to said person. 
 
