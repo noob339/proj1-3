@@ -455,21 +455,23 @@ def login():
 
         if error is None:
             try:
-                query = text("""
-                    SELECT * FROM users WHERE "UserName" = :username
+                query = sqlalchemy.text("""
+                    SELECT userid, username, password FROM users WHERE "username" = :username
                 """)
                 user = g.conn.execute(query, {"username": username}).fetchone()
                 g.conn.commit()
-                if user is None:
-                    error = 'Incorrect username.'
-                elif user["Password"] != password:  # Direct comparison since no hashing
-                    error = 'Incorrect password.'
+                with user as [userid, username, password]:
+                  if user is None:
+                      error = 'Incorrect username.'
+                  elif user["Password"] != password:  # Direct comparison since no hashing
+                      error = 'Incorrect password.'
 
-                if error is None:
-                    session.clear()
-                    session['user_id'] = user['UserID']  # Set session user ID
-                    flash("Login successful!")
-                    return redirect(url_for('index'))
+                  if error is None:
+                      session.clear()
+                      session['UserID'] = userid  # Set session user ID
+                      flash("Login successful!")
+                      return redirect(url_for('index'))
+                  
             except Exception as e:
                 error = f"Database error: {str(e)}"
                 print(error)  # Log it for debugging
