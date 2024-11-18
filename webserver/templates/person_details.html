@@ -53,47 +53,51 @@
         {% else %}
             <p>No documentation found for this person.</p>
         {% endif %}
-    
-        <h2>Add Documentation</h2>
-        <form method="post">
-            <input type="hidden" name="form_type" value="add_document">
-            <label for="doc_desc">Description:</label><br>
-            <input type="text" id="doc_desc" name="doc_desc" required><br>
-            <label for="doc_link">Link:</label><br>
-            <input type="url" id="doc_link" name="doc_link" required><br>
-            <label for="doc_date">Date:</label><br>
-            <input type="date" id="doc_date" name="doc_date" required><br>
-            <label for="tags">Tags (comma-separated):</label><br>
-            <input type="text" id="tags" name="tags" placeholder="tag1, tag2"><br><br>
-            <button type="submit">Add Documentation</button>
-        </form>
-    
-        <h2>Add Person</h2>
-        <form method="post">
-            <input type="hidden" name="form_type" value="add_person">
-            
-            <label for="first_name">First Name:</label><br>
-            <input type="text" id="first_name" name="first_name" required><br>
-            
-            <label for="last_name">Last Name:</label><br>
-            <input type="text" id="last_name" name="last_name" required><br>
-            
-            <label for="lineage_id">Select Lineage:</label><br>
-            <select id="lineage_id" name="lineage_id" required>
-                {% for lineage in lineages %}
-                    <option value="{{ lineage.lineage_id }}">{{ lineage.lineage_name }}</option>
-                {% endfor %}
-            </select><br>
-            
-            <label for="relationship_type_id">Select Relationship Type:</label><br>
-            <select id="relationship_type_id" name="relationship_type_id" required>
-                {% for relationship in relationship_types %}
-                    <option value="{{ relationship.relationship_type_id }}">{{ relationship.relationship_desc }}</option>
-                {% endfor %}
-            </select><br><br>
-            
-            <button type="submit">Add Person</button>
-        </form>
+        <div style="display: flex; gap: 10px;">
+            <div>
+                <h2>Add Documentation</h2>
+                <form method="post">
+                    <input type="hidden" name="form_type" value="add_document">
+                    <label for="doc_desc">Description:</label><br>
+                    <input type="text" id="doc_desc" name="doc_desc" required><br>
+                    <label for="doc_link">Link:</label><br>
+                    <input type="url" id="doc_link" name="doc_link" required><br>
+                    <label for="doc_date">Date:</label><br>
+                    <input type="date" id="doc_date" name="doc_date" required><br>
+                    <label for="tags">Tags (comma-separated):</label><br>
+                    <input type="text" id="tags" name="tags" placeholder="tag1, tag2"><br><br>
+                    <button type="submit">Add Documentation</button>
+                </form>
+            </div>
+            <div>
+                <h2>Add Person</h2>
+                <form method="post">
+                    <input type="hidden" name="form_type" value="add_person">
+
+                    <label for="first_name">First Name:</label><br>
+                    <input type="text" id="first_name" name="first_name" required><br>
+
+                    <label for="last_name">Last Name:</label><br>
+                    <input type="text" id="last_name" name="last_name" required><br>
+
+                    <label for="lineage_id">Select Lineage:</label><br>
+                    <select id="lineage_id" name="lineage_id" required>
+                        {% for lineage in lineages %}
+                            <option value="{{ lineage.lineage_id }}">{{ lineage.lineage_name }}</option>
+                        {% endfor %}
+                    </select><br>
+
+                    <label for="relationship_type_id">Select Relationship Type:</label><br>
+                    <select id="relationship_type_id" name="relationship_type_id" required>
+                        {% for relationship in relationship_types %}
+                            <option value="{{ relationship.relationship_type_id }}">{{ relationship.relationship_desc }}</option>
+                        {% endfor %}
+                    </select><br><br>
+
+                    <button type="submit">Add Person</button>
+                </form>
+            </div>
+        </div>
     </body>
     </html>
     

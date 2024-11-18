@@ -35,7 +35,7 @@
     <main>
         <h1>Welcome to Your Family Tree</h1>
         {% if 'UserID' in session %}
-            <p>Welcome back, user {{ session['UserID'] }}!</p>
+            <p>Welcome back, {{ session['UserName'] }}!</p>
         {% else %}
             <p>Please log in or register to access more features.</p>
         {% endif %}

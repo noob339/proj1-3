@@ -45,19 +45,7 @@ engine = sqlalchemy.create_engine(DATABASEURI)
 # Example of running queries in your database
 # Note that this will probably not work if you already have a table named 'test' in your database, containing meaningful data. This is only an example showing you how to run queries in your database using SQLAlchemy.
 #
-conn = engine.connect()
 
-# The string needs to be wrapped around text()
-
-conn.execute(sqlalchemy.text("""CREATE TABLE IF NOT EXISTS test (
-  id serial,
-  name text
-);"""))
-#conn.execute(text("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"""))
-
-# To make the queries run, we need to add this commit line
-
-conn.commit() 
 @app.before_request
 def auth():
     # List of routes to exclude from the middleware check
@@ -584,6 +572,7 @@ def login():
         # Signifis a succesful login
         session.clear()
         session['UserID'] = userid  # Set session user ID
+        session['UserName'] = db_username
         flash("Login successful!")
         return redirect(url_for('render_tree'))
 
