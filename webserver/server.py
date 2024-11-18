@@ -91,10 +91,8 @@ def get_associated_person_id(user_id, conn):
             WHERE AssociatedUserID = :user_id
         """)
 
-        # Execute the query
         result = conn.execute(query, {"user_id": user_id}).fetchone()
         person_id = result[0]
-        print(result)
         # Return the person_id if a result is found
         if result:
             return person_id  # Adjust access if result is tuple or dict
@@ -108,6 +106,9 @@ def get_associated_person_id(user_id, conn):
 
 @app.route('/family_tree')
 def render_tree():
+    """
+    Handles rendering the family tree for the loggedin user.
+    """
     with engine.connect() as conn:
         # 6 default is for debugging auth middleware 
         user_id = session.get("UserID", 6)
@@ -136,9 +137,7 @@ def render_tree():
         """)
         edges = conn.execute(edges_query, {"person_id": person_id}).fetchall()
 
-    # Create the graph
     graph = Graph(format="svg")
-    #graph.attr(rankdir="LR")  # Left to right orientation
 
     # Add nodes
     for personid, firstname, lastname, associateduserid, lineagename in nodes:
@@ -169,7 +168,6 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
     """
     Handles adding new documentation to the database, including tags and mappings, within a single transaction.
     """
-    # Begin a transaction
     with conn.begin() as transaction:
         user_id = session.get("UserID", 6)
         try:
@@ -218,12 +216,16 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
             
             return redirect(f"/person/{personid}")
         except Exception as e:
-            # If an error occurs, roll back the transaction
             transaction.rollback()
-            raise e  # Re-raise the exception for further handling
+            raise e 
 
 @app.route("/person/<int:personid>", methods=["GET", "POST"])
 def person_details(personid):
+    """
+    Handles fetching data to show all information on a specific person, adding documents, and new people to the family tree.
+    Args:
+        person_id (int): The person ID to find associated details for rendering.
+    """
     user_id = session.get("UserID", 6)  # Default UserID to 6 if not in session
 
     if request.method == "POST":
@@ -248,12 +250,11 @@ def person_details(personid):
 
                 # Redirect to the new person's details page
                 return redirect(url_for("person_details", personid=new_person_id))
-
+        # Redirect to this endpoint 
         return redirect(url_for("person_details", personid=personid))
 
-    # Fetch lineages and relationship types for the form
     with engine.connect() as conn:
-        # Fetch lineages
+        # Fetch lineages for form
         lineages_query = sqlalchemy.text("""
             SELECT LineageID AS lineage_id, LineageName AS lineage_name
             FROM Lineages
@@ -261,7 +262,7 @@ def person_details(personid):
         """)
         lineages = conn.execute(lineages_query).fetchall()
 
-        # Fetch relationship types
+        # Fetch relationship types for form
         relationship_types_query = sqlalchemy.text("""
             SELECT RelationshipTypeID AS relationship_type_id, RelationshipTypeDesc AS relationship_desc
             FROM RelationshipTypes
@@ -282,7 +283,7 @@ def person_details(personid):
         if not person_result:
             return f"Person with ID {personid} not found", 404
 
-        # Fetch relationships
+        # Fetch relationships on person
         relationships_query = sqlalchemy.text("""
             SELECT Person.PersonID AS related_to, Person.FirstName, Person.LastName, rt.RelationshipTypeDesc 
             FROM Relations AS r
@@ -293,7 +294,7 @@ def person_details(personid):
         relationships = conn.execute(relationships_query, {"personid": personid}).fetchall()
 
 
-        # Fetch documentation
+        # Fetch documentation on person
         documentation_query = sqlalchemy.text("""
         SELECT d.DocumentID, d.DocumentDesc, d.LinkToDoc, d.OccurrenceDate, 
                STRING_AGG(dt.DocumentTagDesc, ',') AS tags
@@ -362,7 +363,7 @@ def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage
     """
     try:
         with conn.begin() as transaction:
-            # Insert new person into the Person table
+            # Add new person, and get newly created person id
             insert_person_query = sqlalchemy.text("""
                 INSERT INTO Person (FirstName, LastName, AssociatedUserID)
                 VALUES (:first_name, :last_name, :user_id)
@@ -377,7 +378,7 @@ def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage
                 raise ValueError("Failed to insert new person.")
             new_person_id = new_person_row[0]
 
-            # Insert into Relations table
+            # Add new person's relationship to existing person passed in param
             insert_relation_query = sqlalchemy.text("""
                 INSERT INTO Relations (PersonID, DirectRelationship, DirectRelationshipTypeID)
                 VALUES (:existing_person_id, :new_person_id, :relationship_type_id)
@@ -399,7 +400,7 @@ def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage
                 }
             )
 
-            # Insert into LineagePersonConnector table
+            # Add new person's lineage
             insert_lineage_person_query = sqlalchemy.text("""
                 INSERT INTO LineagePersonConnector (PersonID, LineageID)
                 VALUES (:new_person_id, :lineage_id)
