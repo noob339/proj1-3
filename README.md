@@ -42,7 +42,16 @@ The url: http://34.139.151.172:8111/
 # Use of external tooling
 
 - We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
-
+  - prompts include:
+    - how do I pass data to jinja template
+    - how do I check the logs of a service systemd is running
+    - how do I access a value from a python tuple
+    - how to I add a tuple to a set
+    - what python libraries can be used to generate a clickable undirect graph
+    - how can I use graphviz to generate a clickable svg for an undirected graph in memory and pass it to a jinja template
+    - how can I get form data from a request in a flask endpoint
+    - how can i define middleware that runs on a set of paths using flask
+    - find me documentation with examples of using the session portion of flask
 - We also used graphviz to help generate family trees dynamically from the database
 - Flask as a web server
 - Jinja for html templating
