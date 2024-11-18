@@ -45,6 +45,7 @@ The url: http://34.139.151.172:8111/
   - prompts include:
     - how do I pass data to jinja template
     - how do I check the logs of a service systemd is running
+    - how can I setup a cron job that runs every n minutes
     - how do I access a value from a python tuple
     - how to I add a tuple to a set
     - what python libraries can be used to generate a clickable undirect graph
