@@ -46,6 +46,6 @@ The url: http://34.139.151.172:8111/
 - We also used graphviz to help generate family trees dynamically from the database
 - Flask as a web server
 - Jinja for html templating
-- psycopg2 to act as an interface for sqlalchemy to work with a postgresl database engine
+- psycopg2 to act as an interface for sqlalchemy to work with a postgresql database engine
 - sqlalchemy to connect to the database
 - click to setup flask web server options ie port, IPs to accept incoming connections from, set the web server to run multithreaded etc
