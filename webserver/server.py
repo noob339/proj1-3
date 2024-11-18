@@ -487,36 +487,59 @@ def register():
 
         if error is None:
             try:
-                # Insert the user
-                user_query = sqlalchemy.text("""
-                    INSERT INTO "users" ("username", "email", "password")
-                    VALUES (:username, :email, :password)
-                    RETURNING "userid"
-                """)
-                result = g.conn.execute(
-                    user_query,
-                    {
-                        "username": username,
-                        "email": email,
-                        "password": password,
-                    }
-                )
-                user_id = result.fetchone()[0] 
+                with g.conn.begin() as transaction:
+                  # Insert the user
+                  user_query = sqlalchemy.text("""
+                      INSERT INTO "users" ("username", "email", "password")
+                      VALUES (:username, :email, :password)
+                      RETURNING "userid"
+                  """)
+                  result = g.conn.execute(
+                      user_query,
+                      {
+                          "username": username,
+                          "email": email,
+                          "password": password,
+                      }
+                  )
+                  user_id = result.fetchone()[0] 
 
-                # insert the person
-                person_query = sqlalchemy.text("""
-                    INSERT INTO "person" ("firstname", "lastname", "associateduserid")
-                    VALUES (:first_name, :last_name, :user_id)
-                """)
-                g.conn.execute(
-                    person_query,
-                    {
-                        "first_name": first_name,
-                        "last_name": last_name,
-                        "user_id": user_id,
-                    }
-                )
-                g.conn.commit()
+                  # insert the person
+                  person_query = sqlalchemy.text("""
+                      INSERT INTO "person" ("firstname", "lastname", "associateduserid")
+                      VALUES (:first_name, :last_name, :user_id)
+                      RETURNING "personid"
+                  """)
+                  result = g.conn.execute(
+                      person_query,
+                      {
+                          "first_name": first_name,
+                          "last_name": last_name,
+                          "user_id": user_id,
+                      }
+                  )
+                  person_id = result.fetchone()[0]
+                  # Add new lineage based on last name
+                  insert_lineage_query = sqlalchemy.text("""
+                                                            INSERT INTO "lineages" ("lineagename") 
+                                                            VALUES (:last_name)
+                                                            RETURNING "lineageid"
+                                                         """)
+                  result = g.conn.execute(insert_lineage_query,
+                                 {
+                                     "last_name": last_name
+                                 })
+                  lineage_id = result.fetchone()[0]
+                  # Add link to lineage
+                  insert_lineage_person_mapping_query = sqlalchemy.text("""
+                                                                        INSERT INTO "lineagepersonconnector" ("lineageid", "personid")
+                                                                        VALUES (:lineage_id, :person_id)
+                                                                        """)
+                  g.conn.execute(insert_lineage_person_mapping_query,
+                                 {
+                                     "lineage_id": lineage_id,
+                                     "person_id": person_id
+                                 })
                 flash("Registration successful!")
                 return redirect(url_for('register'))
             except Exception as e:
