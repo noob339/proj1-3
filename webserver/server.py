@@ -645,7 +645,8 @@ def user_tags():
         print(f"Tags: {tags}")
 
         query = sqlalchemy.text("SELECT FirstName, LastName FROM Person WHERE PersonID = :person_id")
-        result = g.conn.execute(query, {"person_id": person_id})
+        result = g.conn.execute(query, {"person_id": person_id}).fetchone()
+        print(result)
         FirstName, LastName = result
     except Exception as e:
         flash(f"Error fetching tags: {e}")
