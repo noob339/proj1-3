@@ -11,7 +11,7 @@ The url: http://34.139.151.172:8111/
 
 ## Family Tree Creation and Maintenance Epic
 
-1. **As a user,** I want to be able to log in to see and edit my family tree. endpoint: /family_tree
+1. **As a user,** I want to be able to log in to see and edit my family tree. endpoint: /login and /family_tree
 2. **As a user,** I want to be able to update my information. not implemented fully, but you can update the associated person's info on endpoint /person
 3. **As a user,** I want to be able to add new people I have relationships with:
    - a. When I add a new person, I want to be able to click on the person they have a direct relationship with and specify the relationship they have to this existing person. endpoint: /person
