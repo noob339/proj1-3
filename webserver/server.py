@@ -626,7 +626,7 @@ def user_tags():
             JOIN Documents AS d ON d.AssociatedPersonID = p.PersonID
             JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
             JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
-            WHERE (:filter_by_user IS FALSE OR d.AddedByUserID = :user_id)
+            WHERE (:filter_by_user = FALSE OR (d.AddedByUserID = :user_id AND dtm.AddedByUserID = :user_id))
             GROUP BY LOWER(dt.DocumentTagDesc)
         """)
 
