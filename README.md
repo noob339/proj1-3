@@ -35,7 +35,7 @@ The url: http://34.139.151.172:8111/
 - Another web page is the page to show details related to a person, which can be accessed by clicking on that person in the family tree. It displays their information allowing you add documents and add other people related to the person.
    - We made queries to retrieve the user's lineage, relationships, relationship types, personal details and documents.
    - This page serves both as an informational resource for the user, and a way to add other people to their tree, and add documents.  
-   - It is interesting to interact with mauch of our schema.
+   - It is interesting to interact with much of our schema.
 
 - We needed to add another entity for the relationship types to the ERD because it was already present in our database, and allows us to flexibly populate drop down selectors for specifying relationship types, and add new relationship types easily. 
 
