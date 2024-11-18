@@ -615,7 +615,8 @@ def user_tags():
     filter_by_user = request.form.get('filter_by_user') == 'on'
 
     print(f"Filter by user toggle: {filter_by_user}")  
-
+    FirstName = ""
+    LastName = ""
     try:
         query = sqlalchemy.text("""
             SELECT LOWER(dt.DocumentTagDesc) AS tag_desc, COUNT(dt.DocumentTagDesc) AS no_tags
@@ -626,7 +627,7 @@ def user_tags():
             JOIN Documents AS d ON d.AssociatedPersonID = p.PersonID
             JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
             JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
-            WHERE (:filter_by_user = FALSE OR (d.AddedByUserID = :user_id AND dtm.AddedByUserID = :user_id))
+            WHERE (:filter_by_user IS FALSE OR d.AddedByUserID = :user_id)
             GROUP BY LOWER(dt.DocumentTagDesc)
         """)
 
@@ -643,12 +644,15 @@ def user_tags():
         # Print on the console to see if the tags exists 
         print(f"Tags: {tags}")
 
+        query = sqlalchemy.text("SELECT FirstName, LastName FROM Person WHERE PersonID = :person_id")
+        result = g.conn.execute(query, {"person_id": person_id})
+        FirstName, LastName = result
     except Exception as e:
         flash(f"Error fetching tags: {e}")
         print(f"Error: {e}")
         tags = []
 
-    return render_template('user_tags.html', tags=tags, UserID=user_id, filter_by_user=filter_by_user)
+    return render_template('user_tags.html', tags=tags, Name=FirstName + " " + LastName, filter_by_user=filter_by_user)
 
 
 
