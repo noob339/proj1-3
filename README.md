@@ -41,6 +41,12 @@ The url: http://34.139.151.172:8111/
 
 # Use of external tooling
 
+- We also used graphviz to help generate family trees dynamically from the database
+- Flask as a web server
+- Jinja for html templating
+- psycopg2 to act as an interface for sqlalchemy to work with a postgresql database engine
+- sqlalchemy to connect to the database
+- click to setup flask web server options ie port, IPs to accept incoming connections from, set the web server to run multithreaded etc
 - We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
   - prompts include:
     - how do I pass data to jinja template
@@ -53,9 +59,4 @@ The url: http://34.139.151.172:8111/
     - how can I get form data from a request in a flask endpoint
     - how can i define middleware that runs on a set of paths using flask
     - find me documentation with examples of using the session portion of flask
-- We also used graphviz to help generate family trees dynamically from the database
-- Flask as a web server
-- Jinja for html templating
-- psycopg2 to act as an interface for sqlalchemy to work with a postgresql database engine
-- sqlalchemy to connect to the database
-- click to setup flask web server options ie port, IPs to accept incoming connections from, set the web server to run multithreaded etc
+
