@@ -66,7 +66,7 @@ def auth():
     # Check if the route is excluded
     if request.endpoint in excluded_routes:
         return  # Skip the check for these routes
-    print(request.endpoint)
+    
     # Check if the session variable "user" is set
     if 'UserID' not in session:
         return render_template('index.html')
