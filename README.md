@@ -25,11 +25,27 @@ The url: http://34.139.151.172:8111/
    - I want to be able to only show the tags I added when I check a box to apply this filter
 
 
-The primary web page would be the family tree itself. It was implemented using the graphviz package. It’s a tree containing the nodes of all belonging to the family lineage with the user logged in at the center. It utilizes two complex queries involving multiple relationships where the first retrieves all the nodes of the graphs while the second retrieves all the edges of the graphs allowing us to build and render the family tree associated with the user. 
+## Detailed description of a few interesting features
 
-Another interesting web page is the layout of the person's details upon clicking on a node within the tree. It displays their info and allows you add documents and add other people related to the person as well. It involves multiple queries to multiple entities to be able to gather all this information. We made queries to retrieve the user's lineage, their relationships, their relationship types,  their personal details and their documents. Its interesting to bring this to life allowing us to interact with a majority of the relations in our tables in order to build a page that serves both as an informational resource for the user but also a way to add other people to their tree as well as add documents.  
+- The primary web page is the family tree.
+   - Implemented using the graphviz package.
+   - The family tree shows many members of a family lineage, and connected lineages with the logged in user at the center.
+   - It utilizes two queries involving multiple relationships where the first retrieves all the nodes of the graphs, and the second retrieves all the edges of the graphs allowing us to build and render the family tree associated with the user. 
 
-We needed to add another entity for the relationship types in order to simplify the addition of a relative to said person. 
+- Another web page is the page to show details related to a person, which can be accessed by clicking on that person in the family tree. It displays their information allowing you add documents and add other people related to the person.
+   - We made queries to retrieve the user's lineage, relationships, relationship types, personal details and documents.
+   - This page serves both as an informational resource for the user, and a way to add other people to their tree, and add documents.  
+   - It is interesting to interact with mauch of our schema.
 
-We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
+- We needed to add another entity for the relationship types to the ERD because it was already present in our database, and allows us to flexibly populate drop down selectors for specifying relationship types, and add new relationship types easily. 
 
+# Use of external tooling
+
+- We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
+
+- We also used graphviz to help generate family trees dynamically from the database
+- Flask as a web server
+- Jinja for html templating
+- psycopg2 to act as an interface for sqlalchemy to work with a postgresl database engine
+- sqlalchemy to connect to the database
+- click to setup flask web server options ie port, IPs to accept incoming connections from, set the web server to run multithreaded etc
