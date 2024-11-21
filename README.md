@@ -11,7 +11,7 @@ The url: http://34.139.151.172:8111/
 
 ## Family Tree Creation and Maintenance Epic
 
-1. **As a user,** I want to be able to log in to see and edit my family tree. endpoint: /family_tree
+1. **As a user,** I want to be able to log in to see and edit my family tree. endpoint: /login and /family_tree
 2. **As a user,** I want to be able to update my information. not implemented fully, but you can update the associated person's info on endpoint /person
 3. **As a user,** I want to be able to add new people I have relationships with:
    - a. When I add a new person, I want to be able to click on the person they have a direct relationship with and specify the relationship they have to this existing person. endpoint: /person
@@ -35,17 +35,29 @@ The url: http://34.139.151.172:8111/
 - Another web page is the page to show details related to a person, which can be accessed by clicking on that person in the family tree. It displays their information allowing you add documents and add other people related to the person.
    - We made queries to retrieve the user's lineage, relationships, relationship types, personal details and documents.
    - This page serves both as an informational resource for the user, and a way to add other people to their tree, and add documents.  
-   - It is interesting to interact with mauch of our schema.
+   - It is interesting to interact with much of our schema.
 
 - We needed to add another entity for the relationship types to the ERD because it was already present in our database, and allows us to flexibly populate drop down selectors for specifying relationship types, and add new relationship types easily. 
 
 # Use of external tooling
 
-- We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
-
 - We also used graphviz to help generate family trees dynamically from the database
 - Flask as a web server
 - Jinja for html templating
-- psycopg2 to act as an interface for sqlalchemy to work with a postgresl database engine
+- psycopg2 to act as an interface for sqlalchemy to work with a postgresql database engine
 - sqlalchemy to connect to the database
 - click to setup flask web server options ie port, IPs to accept incoming connections from, set the web server to run multithreaded etc
+- We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
+  - prompts include:
+    - how do I pass data to jinja template
+    - how do I set up a service on ubuntu with systemd
+    - how do I check the logs of a service systemd is running
+    - how can I setup a cron job that runs every n minutes
+    - how do I access a value from a python tuple
+    - how to I add a tuple to a set
+    - what python libraries can be used to generate a clickable undirect graph
+    - how can I use graphviz to generate a clickable svg for an undirected graph in memory and pass it to a jinja template
+    - how can I get form data from a request in a flask endpoint
+    - how can i define middleware that runs on a set of paths using flask
+    - find me documentation with examples of using the session portion of flask
+
