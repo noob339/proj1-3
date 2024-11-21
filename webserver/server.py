@@ -285,7 +285,7 @@ def person_details(personid):
         # Fetch documentation on person
         documentation_query = sqlalchemy.text("""
         SELECT d.DocumentID, d.DocumentDesc, d.LinkToDoc, d.OccurrenceDate, 
-               STRING_AGG(dt.DocumentTagDesc, ',') AS tags
+               STRING_AGG(dt.DocumentTagDesc, ', ') AS tags
         FROM Documents AS d
         LEFT JOIN DocumentTagMapping dtm ON dtm.DocumentID = d.DocumentID
         LEFT JOIN DocumentTags dt ON dt.DocumentTagID = dtm.DocumentTagID
