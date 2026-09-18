@@ -1,10 +1,5 @@
 # Family tree and digital archive
 
-Course project by **Euripides Soto and Andrew Rubinstein**, Columbia COMS W4111.
-The original Flask application is followed below by its historical feature notes.
-The subsequent database cleanup is in `database/`; its source inventory, inferred
-fixture repairs, and original recursion implementation are preserved there.
-
 ## Local setup
 
 Requires Python 3.11+, PostgreSQL with `psql`/`createdb`, and the Graphviz `dot`
