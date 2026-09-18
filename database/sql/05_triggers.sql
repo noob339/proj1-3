@@ -1,5 +1,5 @@
 -- Original insert-only trigger, installed AFTER explicit demo lineage memberships.
--- Does not prevent deleting the last membership. See docs/ANALYSIS.md.
+-- Does not prevent deleting the last membership.
 CREATE OR REPLACE FUNCTION enforce_person_lineage_participation() 
 RETURNS TRIGGER AS $$ 
 DECLARE

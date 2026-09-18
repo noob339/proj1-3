@@ -1,4 +1,4 @@
-"""Run only against a freshly seeded, disposable database (see README)."""
+"""Set TEST_DATABASE_URL to a freshly seeded, disposable database to run."""
 import os
 import secrets
 import unittest

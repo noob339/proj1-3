@@ -1,9 +1,9 @@
 # Family tree and digital archive
 
-## Local setup
+## Setup
 
-Requires Python 3.11+, PostgreSQL with `psql`/`createdb`, and the Graphviz `dot`
-executable. Install Graphviz using your system package manager. From this folder:
+Requires Python 3.11+, a running PostgreSQL server with `psql` and `createdb`,
+and Graphviz (`dot` on your PATH). From this directory:
 
 ```sh
 python3 -m venv .venv
@@ -11,70 +11,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 createdb db4111_demo
 psql -X -v ON_ERROR_STOP=1 -d db4111_demo -f database/sql/setup_demo.sql
-psql -X -v ON_ERROR_STOP=1 -d db4111_demo -f database/sql/queries/run_all.sql
-psql -X -v ON_ERROR_STOP=1 -d db4111_demo -f database/tests/smoke.sql
 export DATABASE_URL='postgresql+psycopg2:///db4111_demo'
 export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 python webserver/server.py
 ```
 
-Open http://127.0.0.1:8111 and register a new local account, then log in. Registration
-stores a Werkzeug password hash and creates one person and one surname lineage.
-All supplied fixture passwords remain NULL and cannot authenticate. Once logged
-in, visit `/person/6` to explore Bruce Wayne's three documents and add people or
-linked documents. Your tree initially shows your newly registered person.
+Open http://127.0.0.1:8111, register an account, and log in. Sample accounts
+cannot log in. Visit `/person/6` to view the sample family records.
 
-The application defaults to the local `db4111_demo` database and explicitly uses
-`public` as its search path. `.env.example` documents configuration; `.env` files
-are not loaded automatically. Use shell exports and keep credentials out of git.
-The old course database is not contacted. For another host/port, configure
-`DATABASE_URL` and pass corresponding connection flags to `psql` and `createdb`.
-For empty schema without fixtures, use `database/sql/setup_schema.sql` in a
-separate new database. Never run demo setup against existing data. Existing
-installations need a separately reviewed migration and backup; old plaintext
-passwords are not accepted by the updated login.
+Use a new, empty database for setup. For a database without sample records,
+use `database/sql/setup_schema.sql` instead of `setup_demo.sql`.
 
-## Integration decisions and limits
-
-- Original unquoted identifiers fold to lowercase, matching the app's result keys.
-  No ORM models or existing migration system were found.
-- Only `enum_lins` is used by the app. The replacement traverses connected
-  lineages without the old depth-eight limit, including inactive archive rows.
-- This remains a shared course-demo archive: authenticated users can view and
-  add to arbitrary people. Family connectivity is navigation, not authorization.
-  `AssociatedUserID` remains an association, not ownership. When several people
-  are associated, the lowest person ID is the deterministic tree starting point.
-- Active accounts can log in; lineage and relationship selectors show active
-  entries. Archive queries otherwise retain their historical lack of IsActive
-  filtering. This is not a private multi-user service; no new privacy model,
-  email verification, CSRF protection, upload storage, or external syncing is claimed.
-- Registration relies on the insert trigger. Adding a relative replaces the new
-  automatic surname lineage with the selected lineage in the same transaction,
-  removing the unused automatic lineage. The trigger still does not prevent
-  deleting a person's last membership.
-- Relationship types describe the new target relative to the existing source.
-  The app writes that directed edge only; it no longer creates an incorrect
-  reciprocal with the same type. Reverse roles are not inferred. The original
-  primary key still allows one type per ordered pair.
-- Tag summaries count distinct documents so overlapping memberships do not
-  inflate totals. User filtering continues to mean document author.
-
-## Validation
-
-SQL checks above require a freshly seeded demo database. Application regression
-checks use one rollback-only transaction (sequences can still advance):
-
-```sh
-TEST_DATABASE_URL="$DATABASE_URL" .venv/bin/python -m unittest discover -s tests -v
-```
-
-See [integration validation](database/docs/INTEGRATION.md) for actual results.
-`db4111-cleanup/` is the supplied handoff snapshot; `database/` is the integrated
-location used by the app setup instructions. No historical database migration
-or deployment was performed. Check course publication restrictions
-before publishing course work.
-
-## Original application notes
+For a different PostgreSQL host or port, update `DATABASE_URL` and supply matching
+connection options to `createdb` and `psql`. Export variables in your shell;
+`.env` files are not loaded automatically.
 
 # User Stories
 
@@ -104,14 +54,14 @@ before publishing course work.
 - The primary web page is the family tree.
    - Implemented using the graphviz package.
    - The family tree shows many members of a family lineage, and connected lineages with the logged in user at the center.
-   - It utilizes two queries involving multiple relationships where the first retrieves all the nodes of the graphs, and the second retrieves all the edges of the graphs allowing us to build and render the family tree associated with the user. 
+   - It utilizes two queries involving multiple relationships where the first retrieves all the nodes of the graphs, and the second retrieves all the edges of the graphs allowing us to build and render the family tree associated with the user.
 
 - Another web page is the page to show details related to a person, which can be accessed by clicking on that person in the family tree. It displays their information allowing you add documents and add other people related to the person.
    - We made queries to retrieve the user's lineage, relationships, relationship types, personal details and documents.
-   - This page serves both as an informational resource for the user, and a way to add other people to their tree, and add documents.  
+   - This page serves both as an informational resource for the user, and a way to add other people to their tree, and add documents.
    - It is interesting to interact with much of our schema.
 
-- We needed to add another entity for the relationship types to the ERD because it was already present in our database, and allows us to flexibly populate drop down selectors for specifying relationship types, and add new relationship types easily. 
+- We needed to add another entity for the relationship types to the ERD because it was already present in our database, and allows us to flexibly populate drop down selectors for specifying relationship types, and add new relationship types easily.
 
 # Use of external tooling
 
@@ -121,7 +71,7 @@ before publishing course work.
 - psycopg2 to act as an interface for sqlalchemy to work with a postgresql database engine
 - sqlalchemy to connect to the database
 - click to setup flask web server options ie port, IPs to accept incoming connections from, set the web server to run multithreaded etc
-- We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work. 
+- We used AI tools such as chatgpt to help us with the Jinja templates and html, as well as, debugging certain issues related to python syntax and additionally to troubleshoot our systemd service to automatically update and deploy our app as we work.
   - prompts include:
     - how do I pass data to jinja template
     - how do I set up a service on ubuntu with systemd
