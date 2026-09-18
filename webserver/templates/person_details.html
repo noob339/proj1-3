@@ -87,7 +87,7 @@
                         {% endfor %}
                     </select><br>
 
-                    <label for="relationship_type_id">Select Relationship Type:</label><br>
+                    <label for="relationship_type_id">New person’s relationship to {{ person.firstname }}:</label><br>
                     <select id="relationship_type_id" name="relationship_type_id" required>
                         {% for relationship in relationship_types %}
                             <option value="{{ relationship.relationship_type_id }}">{{ relationship.relationship_desc }}</option>

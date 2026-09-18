@@ -10,6 +10,7 @@ Read about it online.
 """
 import os
   # accessible as a variable in index.html:
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlalchemy
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, session, render_template, g, redirect, Response, abort, flash, url_for
@@ -22,29 +23,12 @@ tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 app.secret_key = os.urandom(24)
 
-#
-# The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
-#
-# XXX: The URI should be in the format of:
-#
-#     postgresql://user:password@104.196.222.236/proj1part2
-#
-# For example, if you had username gravano and password foobar, then the following line would be:
-#
-#     DATABASEURI = "postgresql://gravano:foobar@104.196.222.236/proj1part2"
-#
-DATABASEURI = "postgresql://es4140:whocares123@104.196.222.236/proj1part2"
-
-
-#
-# This line creates a database engine that knows how to connect to the URI above.
-#
-engine = sqlalchemy.create_engine(DATABASEURI)
-
-#
-# Example of running queries in your database
-# Note that this will probably not work if you already have a table named 'test' in your database, containing meaningful data. This is only an example showing you how to run queries in your database using SQLAlchemy.
-#
+# Fresh local database by default; never contact the historical course server.
+DATABASEURI = os.environ.get("DATABASE_URL", "postgresql+psycopg2:///db4111_demo")
+engine = sqlalchemy.create_engine(
+    DATABASEURI, connect_args={"options": "-csearch_path=public"}
+)
+app.secret_key = os.environ.get("SECRET_KEY") or app.secret_key
 
 @app.before_request
 def auth():
@@ -77,10 +61,11 @@ def get_associated_person_id(user_id, conn):
             SELECT personid
             FROM person
             WHERE AssociatedUserID = :user_id
+            ORDER BY personid LIMIT 1
         """)
 
         result = conn.execute(query, {"user_id": user_id}).fetchone()
-        person_id = result[0]
+        person_id = result[0] if result else None
         # Return the person_id if a result is found
         if result:
             return person_id  # Adjust access if result is tuple or dict
@@ -98,9 +83,11 @@ def render_tree():
     Handles rendering the family tree for the loggedin user.
     """
     with engine.connect() as conn:
-        # 6 default is for debugging auth middleware 
-        user_id = session.get("UserID", 6)
+        user_id = session["UserID"]
         person_id = get_associated_person_id(user_id, conn)
+        if person_id is None:
+            flash("No associated person found for the logged-in user.")
+            return redirect(url_for("index"))
         # Fetch nodes
         nodes_query = sqlalchemy.text("""
         SELECT p.personid, p.firstname, p.lastname, p.associateduserid, l.lineagename 
@@ -157,7 +144,7 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
     Handles adding new documentation to the database, including tags and mappings, within a single transaction.
     """
     with conn.begin() as transaction:
-        user_id = session.get("UserID", 6)
+        user_id = session["UserID"]
         try:
             user_id = session.get("UserID", None)
             # Insert the document into the Documents table
@@ -168,12 +155,12 @@ def add_documentation(conn, personid, doc_desc, doc_link, doc_date, tags_csv):
             """)
             result = conn.execute(
                 insert_doc_query,
-                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date, "user_id": user_id},
+                {"personid": personid, "doc_desc": doc_desc, "doc_link": doc_link, "doc_date": doc_date or None, "user_id": user_id},
             )
             document_id = result.fetchone()[0]
 
             # Parse the CSV of tags
-            tags = [tag.strip() for tag in tags_csv.split(",") if tag.strip()]
+            tags = list(dict.fromkeys(tag.strip() for tag in tags_csv.split(",") if tag.strip()))
 
             # Fetch existing tags from the DocumentTags table
             existing_tags_query = sqlalchemy.text("""
@@ -214,7 +201,7 @@ def person_details(personid):
     Args:
         person_id (int): The person ID to find associated details for rendering.
     """
-    user_id = session.get("UserID", 6)  # Default UserID to 6 if not in session
+    user_id = session["UserID"]
 
     if request.method == "POST":
         form_type = request.form.get("form_type")
@@ -379,14 +366,15 @@ def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage
                     "relationship_type_id": relationship_type_id,
                 }
             )
-            conn.execute(
-                insert_relation_query,
-                {
-                    "existing_person_id": new_person_id,
-                    "new_person_id": existing_person_id,
-                    "relationship_type_id": relationship_type_id,
-                }
-            )
+            # A relationship describes the target relative to the source.
+            # No reciprocal is inferred: parent/child gender is not known here.
+
+            # Replace only the automatic surname membership created for this
+            # new person. The entire operation rolls back if the chosen ID fails.
+            automatic_lineages = conn.execute(sqlalchemy.text(
+                "DELETE FROM LineagePersonConnector WHERE PersonID = :person_id "
+                "RETURNING LineageID"
+            ), {"person_id": new_person_id}).scalars().all()
 
             # Add new person's lineage
             insert_lineage_person_query = sqlalchemy.text("""
@@ -397,6 +385,13 @@ def add_person(conn, first_name, last_name, user_id, existing_person_id, lineage
                 insert_lineage_person_query,
                 {"new_person_id": new_person_id, "lineage_id": lineage_id}
             )
+
+            for automatic_id in automatic_lineages:
+                conn.execute(sqlalchemy.text(
+                    "DELETE FROM Lineages WHERE LineageID = :lineage_id "
+                    "AND NOT EXISTS (SELECT 1 FROM LineagePersonConnector "
+                    "WHERE LineageID = :lineage_id)"
+                ), {"lineage_id": automatic_id})
 
             return new_person_id
 
@@ -499,7 +494,7 @@ def register():
                       {
                           "username": username,
                           "email": email,
-                          "password": password,
+                          "password": generate_password_hash(password),
                       }
                   )
                   user_id = result.fetchone()[0] 
@@ -519,27 +514,7 @@ def register():
                       }
                   )
                   person_id = result.fetchone()[0]
-                  # Add new lineage based on last name
-                  insert_lineage_query = sqlalchemy.text("""
-                                                            INSERT INTO "lineages" ("lineagename") 
-                                                            VALUES (:last_name)
-                                                            RETURNING "lineageid"
-                                                         """)
-                  result = g.conn.execute(insert_lineage_query,
-                                 {
-                                     "last_name": last_name
-                                 })
-                  lineage_id = result.fetchone()[0]
-                  # Add link to lineage
-                  insert_lineage_person_mapping_query = sqlalchemy.text("""
-                                                                        INSERT INTO "lineagepersonconnector" ("lineageid", "personid")
-                                                                        VALUES (:lineage_id, :person_id)
-                                                                        """)
-                  g.conn.execute(insert_lineage_person_mapping_query,
-                                 {
-                                     "lineage_id": lineage_id,
-                                     "person_id": person_id
-                                 })
+                  # The database AFTER INSERT trigger supplies the surname lineage.
                 flash("Registration successful!")
                 return redirect(url_for('register'))
             except Exception as e:
@@ -575,7 +550,7 @@ def login():
     try:
         # Query db for the user
         query = sqlalchemy.text("""
-            SELECT userid, username, password FROM users WHERE "username" = :username
+            SELECT userid, username, password FROM users WHERE "username" = :username AND isactive = TRUE
         """)
         user = g.conn.execute(query, {"username": username}).fetchone()
         g.conn.commit()
@@ -587,8 +562,8 @@ def login():
 
         userid, db_username, db_password = user
 
-        # Check if password valid (no hashing for now)
-        if db_password != password:
+        # NULL-password fixtures cannot log in. Legacy plaintext is not accepted.
+        if not db_password or not check_password_hash(db_password, password):
             flash('Incorrect password.')
             return render_template('login.html')
 
@@ -627,12 +602,13 @@ def user_tags():
     # Toggle check real quick
     filter_by_user = request.form.get('filter_by_user') == 'on'
 
-    print(f"Filter by user toggle: {filter_by_user}")  
+    print(f"Filter by user toggle: {filter_by_user}") 
+     
     FirstName = ""
     LastName = ""
     try:
         query = sqlalchemy.text("""
-            SELECT LOWER(dt.DocumentTagDesc) AS tag_desc, COUNT(dt.DocumentTagDesc) AS no_tags
+            SELECT LOWER(dt.DocumentTagDesc) AS tag_desc, COUNT(DISTINCT d.DocumentID) AS no_tags
             FROM enum_lins(:person_id) el
             JOIN LineagePersonConnector AS lpc ON lpc.LineageID = el.LineageID
             JOIN Person AS p ON p.PersonID = lpc.PersonID
@@ -677,7 +653,7 @@ if __name__ == "__main__":
   @click.command()
   @click.option('--debug', is_flag=True)
   @click.option('--threaded', is_flag=True)
-  @click.argument('HOST', default='0.0.0.0')
+  @click.argument('HOST', default='127.0.0.1')
   @click.argument('PORT', default=8111, type=int)
   def run(debug, threaded, host, port):
     """

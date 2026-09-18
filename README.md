@@ -1,6 +1,85 @@
-The db is on es4140
+# Family tree and digital archive
 
-The url: http://34.139.151.172:8111/
+Course project by **Euripides Soto and Andrew Rubinstein**, Columbia COMS W4111.
+The original Flask application is followed below by its historical feature notes.
+The subsequent database cleanup is in `database/`; its source inventory, inferred
+fixture repairs, and original recursion implementation are preserved there.
+
+## Local setup
+
+Requires Python 3.11+, PostgreSQL with `psql`/`createdb`, and the Graphviz `dot`
+executable. Install Graphviz using your system package manager. From this folder:
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+createdb db4111_demo
+psql -X -v ON_ERROR_STOP=1 -d db4111_demo -f database/sql/setup_demo.sql
+psql -X -v ON_ERROR_STOP=1 -d db4111_demo -f database/sql/queries/run_all.sql
+psql -X -v ON_ERROR_STOP=1 -d db4111_demo -f database/tests/smoke.sql
+export DATABASE_URL='postgresql+psycopg2:///db4111_demo'
+export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+python webserver/server.py
+```
+
+Open http://127.0.0.1:8111 and register a new local account, then log in. Registration
+stores a Werkzeug password hash and creates one person and one surname lineage.
+All supplied fixture passwords remain NULL and cannot authenticate. Once logged
+in, visit `/person/6` to explore Bruce Wayne's three documents and add people or
+linked documents. Your tree initially shows your newly registered person.
+
+The application defaults to the local `db4111_demo` database and explicitly uses
+`public` as its search path. `.env.example` documents configuration; `.env` files
+are not loaded automatically. Use shell exports and keep credentials out of git.
+The old course database is not contacted. For another host/port, configure
+`DATABASE_URL` and pass corresponding connection flags to `psql` and `createdb`.
+For empty schema without fixtures, use `database/sql/setup_schema.sql` in a
+separate new database. Never run demo setup against existing data. Existing
+installations need a separately reviewed migration and backup; old plaintext
+passwords are not accepted by the updated login.
+
+## Integration decisions and limits
+
+- Original unquoted identifiers fold to lowercase, matching the app's result keys.
+  No ORM models or existing migration system were found.
+- Only `enum_lins` is used by the app. The replacement traverses connected
+  lineages without the old depth-eight limit, including inactive archive rows.
+- This remains a shared course-demo archive: authenticated users can view and
+  add to arbitrary people. Family connectivity is navigation, not authorization.
+  `AssociatedUserID` remains an association, not ownership. When several people
+  are associated, the lowest person ID is the deterministic tree starting point.
+- Active accounts can log in; lineage and relationship selectors show active
+  entries. Archive queries otherwise retain their historical lack of IsActive
+  filtering. This is not a private multi-user service; no new privacy model,
+  email verification, CSRF protection, upload storage, or external syncing is claimed.
+- Registration relies on the insert trigger. Adding a relative replaces the new
+  automatic surname lineage with the selected lineage in the same transaction,
+  removing the unused automatic lineage. The trigger still does not prevent
+  deleting a person's last membership.
+- Relationship types describe the new target relative to the existing source.
+  The app writes that directed edge only; it no longer creates an incorrect
+  reciprocal with the same type. Reverse roles are not inferred. The original
+  primary key still allows one type per ordered pair.
+- Tag summaries count distinct documents so overlapping memberships do not
+  inflate totals. User filtering continues to mean document author.
+
+## Validation
+
+SQL checks above require a freshly seeded demo database. Application regression
+checks use one rollback-only transaction (sequences can still advance):
+
+```sh
+TEST_DATABASE_URL="$DATABASE_URL" .venv/bin/python -m unittest discover -s tests -v
+```
+
+See [integration validation](database/docs/INTEGRATION.md) for actual results.
+`db4111-cleanup/` is the supplied handoff snapshot; `database/` is the integrated
+location used by the app setup instructions. No historical database migration
+or deployment was performed. Check course publication restrictions
+before publishing course work.
+
+## Original application notes
 
 # User Stories
 
@@ -60,4 +139,3 @@ The url: http://34.139.151.172:8111/
     - how can I get form data from a request in a flask endpoint
     - how can i define middleware that runs on a set of paths using flask
     - find me documentation with examples of using the session portion of flask
-
